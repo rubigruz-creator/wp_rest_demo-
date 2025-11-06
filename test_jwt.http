@@ -1,0 +1,72 @@
+GET http://gazonbaza.ru/wp-json/jwt-auth/v1/token/validate
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F6b25iYXphLnJ1IiwiaWF0IjoxNzYyMjY0NTUxLCJuYmYiOjE3NjIyNjQ1NTEsImV4cCI6MTc2Mjg2OTM1MSwiZGF0YSI6eyJ1c2VyIjp7ImlkIjoiMSJ9fX0.CrOXhrSacmERT1CGpHNAeone2cGx1e1niuIC6b9HMIM
+
+
+
+###
+
+
+POST http://gazonbaza.ru/wp-json/jwt-auth/v1/token
+Content-Type: application/json
+
+{
+  "username": "rubiro",
+  "password": "777Kaliningrad1972777"
+}
+
+
+###
+
+
+POST http://gazonbaza.ru/wp-json/wp/v2/veschi/79
+Content-Type: application/json
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F6b25iYXphLnJ1IiwiaWF0IjoxNzYyMzI2OTg3LCJuYmYiOjE3NjIzMjY5ODcsImV4cCI6MTc2MjkzMTc4NywiZGF0YSI6eyJ1c2VyIjp7ImlkIjoiMSJ9fX0.UQvROb41gTl6szNonb7265VDx5mPd9aiaV2FGO2JrnQ
+
+{
+  "acf": {
+    "pole-texta": "123Это тестовое обновление через JWT API!"
+  }
+}
+
+###
+
+
+
+###
+
+
+
+
+POST http://gazonbaza.ru/wp-json/wp/v2/veschi/79 
+Content-Type: application/json
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F6b25iYXphLnJ1IiwiaWF0IjoxNzYyMzI2ODI4LCJuYmYiOjE3NjIzMjY4MjgsImV4cCI6MTc2MjkzMTYyOCwiZGF0YSI6eyJ1c2VyIjp7ImlkIjoiMSJ9fX0.3-5lIqsf5E5Vq_aF3wnW9xeP_k5htMfdRIitQHJMONc
+
+{
+    "title":"Тест",
+    "acf":{
+        "pole-texta":"ZZZZZZ НовQое значениеQ XX"
+    }
+}
+
+###
+
+
+POST http://gazonbaza.ru/wp-json/jwt-auth/v1/token
+Content-Type: application/json
+
+{"username":"rubiro","password":"777Kaliningrad1972777"}
+
+
+
+
+###
+
+
+
+GET http://gazonbaza.ru/wp-json/wp/v2/users/me
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F6b25iYXphLnJ1IiwiaWF0IjoxNzYyMzI4MjI2LCJuYmYiOjE3NjIzMjgyMjYsImV4cCI6MTc2MjkzMzAyNiwiZGF0YSI6eyJ1c2VyIjp7ImlkIjoiMSJ9fX0.Fpb6nwBI96apfZvXDW_ep8h30eqp0IDDSUGZuWJKavk
+
+
+###
+
+GET http://gazonbaza.ru/wp-json/wp/v2/users/1
