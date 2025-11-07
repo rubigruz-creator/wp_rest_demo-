@@ -70,3 +70,15 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ
 ###
 
 GET http://gazonbaza.ru/wp-json/wp/v2/users/1
+
+
+
+
+
+
+flutter clean
+flutter pub get
+flutter build apk --release
+
+
+###

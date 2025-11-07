@@ -48,4 +48,21 @@ class WPApi {
       throw Exception('Ошибка обновления: ${resp.statusCode}');
     }
   }
+
+  Future<List<dynamic>> fetchVeschi() async {
+    final response = await http.get(Uri.parse('$baseUrl/wp-json/wp/v2/veschi'));
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Ошибка загрузки veschi: ${response.statusCode}');
+    }
+  }
+
+
+
+
+
+
+
 }
