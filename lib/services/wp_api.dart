@@ -3,66 +3,47 @@ import 'package:http/http.dart' as http;
 
 class WPApi {
   final String baseUrl;
-  String? _token;
 
   WPApi(this.baseUrl);
 
-  void setToken(String token) {
-    _token = token;
-  }
-
-  Map<String, String> _headers() {
-    final headers = {'Content-Type': 'application/json'};
-    if (_token != null) {
-      headers['Authorization'] = 'Bearer $_token';
-    }
-    return headers;
-  }
-
-  Future<List<dynamic>> fetchPosts() async {
-    final url = Uri.parse('$baseUrl/wp-json/wp/v2/veschi?_fields=id,title,acf,date,author');
-    final resp = await http.get(url, headers: _headers());
-    if (resp.statusCode == 200) {
-      return json.decode(resp.body);
-    } else {
-      throw Exception('Ошибка загрузки: ${resp.statusCode}');
-    }
-  }
-
-  Future<Map<String, dynamic>> fetchPost(int id) async {
-    final url = Uri.parse('$baseUrl/wp-json/wp/v2/veschi/$id/?_fields=acf,title,author');
-    final resp = await http.get(url, headers: _headers());
-    if (resp.statusCode == 200) {
-      return json.decode(resp.body);
-    } else {
-      throw Exception('Ошибка загрузки поста: ${resp.statusCode}');
-    }
-  }
-
-  Future<Map<String, dynamic>> updatePost(int id, Map<String, dynamic> data) async {
-    final url = Uri.parse('$baseUrl/wp-json/wp/v2/veschi/$id');
-    final resp = await http.post(url, headers: _headers(), body: json.encode(data));
-    if (resp.statusCode == 200) {
-      return json.decode(resp.body);
-    } else {
-      throw Exception('Ошибка обновления: ${resp.statusCode}');
-    }
-  }
+  // Твой JWT токен (позже вынесем в настройки)
+  final String jwtToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F6b25iYXphLnJ1IiwiaWF0IjoxNzYyMjY4NjQzLCJuYmYiOjE3NjIyNjg2NDMsImV4cCI6MTc2Mjg3MzQ0MywiZGF0YSI6eyJ1c2VyIjp7ImlkIjoiMSJ9fX0.g_1kXAZf5hiPO_3d25n749JD9hvC_OrGv34OWqrzlBk';
 
   Future<List<dynamic>> fetchVeschi() async {
-    final response = await http.get(Uri.parse('$baseUrl/wp-json/wp/v2/veschi'));
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/wp-json/wp/v2/veschi?_fields=id,date,acf,title'),
+        headers: {
+          'Authorization': 'Bearer $jwtToken',
+        },
+      );
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Ошибка загрузки veschi: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data;
+      } else {
+        throw Exception('Ошибка HTTP: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Ошибка загрузки вещей: $e');
     }
   }
 
+  // Старый метод для постов (оставим на всякий случай)
+  Future<List<dynamic>> fetchPosts() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/wp-json/wp/v2/posts'),
+      );
 
-
-
-
-
-
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data;
+      } else {
+        throw Exception('Ошибка HTTP: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Ошибка загрузки постов: $e');
+    }
+  }
 }
