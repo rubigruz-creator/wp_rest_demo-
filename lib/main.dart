@@ -1,4 +1,7 @@
+import 'dart:convert'; // ДОБАВИТЬ ЭТОТ ИМПОРТ
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'services/wp_api.dart';
 
 void main() {
@@ -31,6 +34,15 @@ class VeschiScreen extends StatefulWidget {
 class _VeschiScreenState extends State<VeschiScreen> {
   late Future<List<dynamic>> _futureVeschi;
   final String placeholderImage = 'https://via.placeholder.com/64?text=No+Photo';
+  final ImagePicker _imagePicker = ImagePicker();
+  
+  // Контроллеры для редактирования текста
+  final Map<int, TextEditingController> _veschNameControllers = {};
+  final Map<int, TextEditingController> _nicknameControllers = {};
+  
+  // Храним ID загруженных изображений
+  final Map<int, int> _veschFotoIds = {};
+  final Map<int, int> _userPhotoIds = {};
 
   @override
   void initState() {
@@ -44,6 +56,53 @@ class _VeschiScreenState extends State<VeschiScreen> {
     });
   }
 
+  // Инициализация контроллеров когда данные загружены
+  void _initializeControllers(List<dynamic> veschi) {
+    _veschNameControllers.clear();
+    _nicknameControllers.clear();
+    _veschFotoIds.clear();
+    _userPhotoIds.clear();
+    
+    for (final item in veschi) {
+      final id = item['id'] as int;
+      final veschName = _getAcfValue(item, 'vesch-name').toString();
+      final nickname = _getAcfValue(item, 'nickname').toString();
+      
+      _veschNameControllers[id] = TextEditingController(text: veschName);
+      _nicknameControllers[id] = TextEditingController(text: nickname);
+      
+      // Сохраняем ID изображений если они есть
+      final veschFoto = _getAcfValue(item, 'vesch-foto');
+      final userPhoto = _getAcfValue(item, 'photo');
+      
+      if (veschFoto != null && veschFoto != '') {
+        if (veschFoto is Map && veschFoto['id'] != null) {
+          _veschFotoIds[id] = veschFoto['id'] as int;
+        } else if (veschFoto is int) {
+          _veschFotoIds[id] = veschFoto;
+        } else if (veschFoto is String) {
+          final intValue = int.tryParse(veschFoto);
+          if (intValue != null) {
+            _veschFotoIds[id] = intValue;
+          }
+        }
+      }
+      
+      if (userPhoto != null && userPhoto != '') {
+        if (userPhoto is Map && userPhoto['id'] != null) {
+          _userPhotoIds[id] = userPhoto['id'] as int;
+        } else if (userPhoto is int) {
+          _userPhotoIds[id] = userPhoto;
+        } else if (userPhoto is String) {
+          final intValue = int.tryParse(userPhoto);
+          if (intValue != null) {
+            _userPhotoIds[id] = intValue;
+          }
+        }
+      }
+    }
+  }
+
   // Функция для форматирования таймера
   String _formatTimer(String dateIso) {
     try {
@@ -55,7 +114,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
       final minutes = diff.inMinutes.remainder(60);
       final seconds = diff.inSeconds.remainder(60);
       
-      return '$hoursч $minutesм $secondsс';
+      return '${hours}ч ${minutes}м ${seconds}с';
     } catch (e) {
       return '0ч 0м 0с';
     }
@@ -88,6 +147,288 @@ class _VeschiScreenState extends State<VeschiScreen> {
     if (imageField is Map && imageField['url'] != null) return imageField['url'];
     if (imageField is Map && imageField['source_url'] != null) return imageField['source_url'];
     return placeholderImage;
+  }
+
+  // Функция для выбора и загрузки изображения
+  Future<void> _pickAndUploadImage(int itemId, String fieldType, BuildContext context) async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                const SizedBox(width: 16),
+                Text('Загрузка ${fieldType == 'vesch-foto' ? 'фото вещи' : 'фото юзера'}...'),
+              ],
+            ),
+          ),
+        );
+
+        final File imageFile = File(pickedFile.path);
+        final fileName = '${fieldType}_${itemId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        
+        final uploadedImage = await widget.api.uploadImage(imageFile, fileName);
+        
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        if (uploadedImage != null) {
+          final imageId = uploadedImage['id'] as int;
+          
+          if (fieldType == 'vesch-foto') {
+            _veschFotoIds[itemId] = imageId;
+          } else {
+            _userPhotoIds[itemId] = imageId;
+          }
+          
+          await _saveChanges(itemId, context, showMessage: false);
+          
+          setState(() {});
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${fieldType == 'vesch-foto' ? 'Фото вещи' : 'Фото юзера'} обновлено!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ошибка загрузки ${fieldType == 'vesch-foto' ? 'фото вещи' : 'фото юзера'}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Функция для сохранения изменений
+  Future<void> _saveChanges(int itemId, BuildContext context, {bool showMessage = true}) async {
+    final veschName = _veschNameControllers[itemId]?.text ?? '';
+    final nickname = _nicknameControllers[itemId]?.text ?? '';
+    
+    if (showMessage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              const SizedBox(width: 16),
+              Text('Сохранение записи $itemId...'),
+            ],
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+
+    try {
+      // Подготавливаем данные для отправки
+      final Map<String, dynamic> updateData = {
+        'acf': {
+          'vesch-name': veschName,
+          'nickname': nickname,
+        }
+      };
+
+      // Добавляем ID изображений если они есть
+      if (_veschFotoIds[itemId] != null) {
+        updateData['acf']!['vesch-foto'] = _veschFotoIds[itemId].toString(); // ✅ приводим к строке
+      }
+
+      if (_userPhotoIds[itemId] != null) {
+        updateData['acf']!['photo'] = _userPhotoIds[itemId].toString(); // ✅ тоже строка
+      }
+
+
+      // УБИРАЕМ json.encode из print - это может вызывать ошибку
+      print('Отправляемые данные для $itemId: $updateData');
+
+      // Отправляем на сервер
+      final success = await widget.api.updateVeschi(itemId, updateData);
+      
+      if (showMessage) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Запись $itemId успешно сохранена!'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ошибка сохранения записи $itemId'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+      
+      _refreshData();
+      
+    } catch (e) {
+      if (showMessage) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      print('Ошибка при сохранении $itemId: $e');
+    }
+  }
+
+
+
+
+  // Функция для добавления новой вещи
+  Future<void> _addNewVesch(BuildContext context) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              const SizedBox(width: 16),
+              const Text('Создание новой вещи...'),
+            ],
+          ),
+        ),
+      );
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final defaultTitle = "Вещь $timestamp";
+
+      final newVeschData = {
+        'title': defaultTitle,
+        'status': 'publish',
+        'acf': {
+          'vesch-name': defaultTitle,
+          'nickname': '',
+        }
+      };
+
+      final createdVesch = await widget.api.createVeschi(newVeschData);
+      
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      if (createdVesch != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Новая вещь создана! ID: ${createdVesch['id']}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        _refreshData();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Ошибка создания новой вещи'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Функция для удаления записи
+  Future<void> _deleteItem(int itemId, BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Удалить вещь?'),
+        content: Text('Вы уверены, что хотите удалить вещь #$itemId?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              const SizedBox(width: 16),
+              Text('Удаление записи $itemId...'),
+            ],
+          ),
+        ),
+      );
+
+      try {
+        final success = await widget.api.deleteVeschi(itemId);
+        
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Запись $itemId успешно удалена!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          
+          _refreshData();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ошибка удаления записи $itemId'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -124,6 +465,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
           }
 
           final veschi = snapshot.data ?? [];
+          _initializeControllers(veschi);
 
           if (veschi.isEmpty) {
             return Center(
@@ -160,20 +502,15 @@ class _VeschiScreenState extends State<VeschiScreen> {
                   DataColumn(label: Text('Действия', style: TextStyle(fontWeight: FontWeight.bold))),
                 ],
                 rows: veschi.map((item) {
-                  final id = item['id']?.toString() ?? '0';
+                  final id = item['id'] as int;
                   final dateIso = item['date'] ?? '';
                   
-                  // Получаем ACF поля
-                  final veschName = _getAcfValue(item, 'vesch-name').toString();
                   final veschFoto = _getAcfValue(item, 'vesch-foto');
                   final userPhoto = _getAcfValue(item, 'photo');
-                  final nickname = _getAcfValue(item, 'nickname').toString();
                   
-                  // Получаем URL изображений
                   final veschFotoUrl = _getImageUrl(veschFoto);
                   final userPhotoUrl = _getImageUrl(userPhoto);
                   
-                  // Форматируем дату
                   String formattedDate = '';
                   try {
                     final date = DateTime.parse(dateIso);
@@ -184,51 +521,77 @@ class _VeschiScreenState extends State<VeschiScreen> {
 
                   return DataRow(
                     cells: [
-                      DataCell(Text(id, style: const TextStyle(fontWeight: FontWeight.bold))),
+                      DataCell(Text(id.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
                       DataCell(
-                        CircleAvatar(
-                          radius: 32,
-                          backgroundImage: NetworkImage(veschFotoUrl),
-                          onBackgroundImageError: (exception, stackTrace) => 
-                              const Icon(Icons.error),
-                          child: veschFotoUrl == placeholderImage 
-                              ? const Icon(Icons.inventory_2_outlined, size: 24)
-                              : null,
+                        GestureDetector(
+                          onTap: () => _pickAndUploadImage(id, 'vesch-foto', context),
+                          child: CircleAvatar(
+                            radius: 32,
+                            backgroundImage: NetworkImage(veschFotoUrl),
+                            onBackgroundImageError: (exception, stackTrace) => 
+                                const Icon(Icons.error),
+                            child: veschFotoUrl == placeholderImage 
+                                ? const Icon(Icons.inventory_2_outlined, size: 24)
+                                : Stack(
+                                    children: [
+                                      Container(color: Colors.black38),
+                                      const Icon(Icons.edit, color: Colors.white, size: 16),
+                                    ],
+                                  ),
+                          ),
                         ),
                       ),
                       DataCell(
-                        SizedBox(
+                        Container(
                           width: 120,
-                          child: Text(
-                            veschName.isEmpty ? 'Без названия' : veschName,
+                          child: TextField(
+                            controller: _veschNameControllers[id],
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              isDense: true,
+                            ),
                             maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
                           ),
                         ),
                       ),
                       DataCell(
-                        CircleAvatar(
-                          radius: 32,
-                          backgroundImage: NetworkImage(userPhotoUrl),
-                          onBackgroundImageError: (exception, stackTrace) => 
-                              const Icon(Icons.error),
-                          child: userPhotoUrl == placeholderImage 
-                              ? const Icon(Icons.person_outline, size: 24)
-                              : null,
+                        GestureDetector(
+                          onTap: () => _pickAndUploadImage(id, 'photo', context),
+                          child: CircleAvatar(
+                            radius: 32,
+                            backgroundImage: NetworkImage(userPhotoUrl),
+                            onBackgroundImageError: (exception, stackTrace) => 
+                                const Icon(Icons.error),
+                            child: userPhotoUrl == placeholderImage 
+                                ? const Icon(Icons.person_outline, size: 24)
+                                : Stack(
+                                    children: [
+                                      Container(color: Colors.black38),
+                                      const Icon(Icons.edit, color: Colors.white, size: 16),
+                                    ],
+                                  ),
+                          ),
                         ),
                       ),
                       DataCell(
-                        SizedBox(
+                        Container(
                           width: 80,
-                          child: Text(
-                            nickname.isEmpty ? '—' : nickname,
+                          child: TextField(
+                            controller: _nicknameControllers[id],
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              isDense: true,
+                            ),
                             maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
                           ),
                         ),
                       ),
                       DataCell(
-                        SizedBox(
+                        Container(
                           width: 80,
                           child: Text(
                             formattedDate,
@@ -244,21 +607,11 @@ class _VeschiScreenState extends State<VeschiScreen> {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.save, color: Colors.green),
-                              onPressed: () {
-                                // TODO: Реализовать сохранение
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Сохранение записи $id')),
-                                );
-                              },
+                              onPressed: () => _saveChanges(id, context),
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {
-                                // TODO: Реализовать удаление
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Удаление записи $id')),
-                                );
-                              },
+                              onPressed: () => _deleteItem(id, context),
                             ),
                           ],
                         ),
@@ -272,12 +625,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Реализовать добавление новой вещи
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Добавление новой вещи')),
-          );
-        },
+        onPressed: () => _addNewVesch(context),
         child: const Icon(Icons.add),
       ),
     );
@@ -303,10 +651,7 @@ class _TimerWidgetState extends State<TimerWidget> {
   @override
   void initState() {
     super.initState();
-    // Запускаем обновление таймера каждую секунду
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startTimer();
-    });
+    _startTimer();
   }
 
   void _startTimer() {
