@@ -8,8 +8,7 @@ plugins {
 android {
     namespace = "com.example.wp_rest_demo"
     compileSdk = flutter.compileSdkVersion
-
-
+    
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -35,10 +34,33 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            
+            // ВРЕМЕННО ОТКЛЮЧАЕМ минификацию чтобы избежать ошибок
+            isMinifyEnabled = false
+            isShrinkResources = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        debug {
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+// Добавляем зависимости если нужно
+dependencies {
+    // Добавь если будут проблемы с поддержкой новых версий Android
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.core:core-ktx:1.12.0")
+    
+    // Добавляем Play Core для решения ошибок с missing classes
+    implementation("com.google.android.play:core:1.10.3")
+    implementation("com.google.android.play:core-ktx:1.8.1")
 }

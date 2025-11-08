@@ -1,4 +1,4 @@
-import 'dart:convert'; // ДОБАВИТЬ ЭТОТ ИМПОРТ
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -80,11 +80,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
           _veschFotoIds[id] = veschFoto['id'] as int;
         } else if (veschFoto is int) {
           _veschFotoIds[id] = veschFoto;
-        } else if (veschFoto is String) {
-          final intValue = int.tryParse(veschFoto);
-          if (intValue != null) {
-            _veschFotoIds[id] = intValue;
-          }
         }
       }
       
@@ -93,11 +88,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
           _userPhotoIds[id] = userPhoto['id'] as int;
         } else if (userPhoto is int) {
           _userPhotoIds[id] = userPhoto;
-        } else if (userPhoto is String) {
-          final intValue = int.tryParse(userPhoto);
-          if (intValue != null) {
-            _userPhotoIds[id] = intValue;
-          }
         }
       }
     }
@@ -218,7 +208,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
   }
 
-  // Функция для сохранения изменений
+  // УПРОЩЕННАЯ ФУНКЦИЯ: Сохранение изменений
   Future<void> _saveChanges(int itemId, BuildContext context, {bool showMessage = true}) async {
     final veschName = _veschNameControllers[itemId]?.text ?? '';
     final nickname = _nicknameControllers[itemId]?.text ?? '';
@@ -239,7 +229,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
 
     try {
-      // Подготавливаем данные для отправки
+      // ПРОСТАЯ ПОДГОТОВКА ДАННЫХ - только текстовые поля
       final Map<String, dynamic> updateData = {
         'acf': {
           'vesch-name': veschName,
@@ -247,20 +237,27 @@ class _VeschiScreenState extends State<VeschiScreen> {
         }
       };
 
-      // Добавляем ID изображений если они есть
-      if (_veschFotoIds[itemId] != null) {
-        updateData['acf']!['vesch-foto'] = _veschFotoIds[itemId].toString(); // ✅ приводим к строке
+      // ДОБАВЛЯЕМ ИЗОБРАЖЕНИЯ ТОЛЬКО ЕСЛИ ОНИ ЕСТЬ
+      if (_veschFotoIds.containsKey(itemId) && _veschFotoIds[itemId] != null) {
+        updateData['acf']!['vesch-foto'] = _veschFotoIds[itemId];
+      }
+      
+      if (_userPhotoIds.containsKey(itemId) && _userPhotoIds[itemId] != null) {
+        updateData['acf']!['photo'] = _userPhotoIds[itemId];
       }
 
-      if (_userPhotoIds[itemId] != null) {
-        updateData['acf']!['photo'] = _userPhotoIds[itemId].toString(); // ✅ тоже строка
+      print('=== ОТЛАДКА: Данные для сохранения ===');
+      print('ID: $itemId');
+      print('vesch-name: ${updateData['acf']!['vesch-name']} (тип: ${updateData['acf']!['vesch-name'].runtimeType})');
+      print('nickname: ${updateData['acf']!['nickname']} (тип: ${updateData['acf']!['nickname'].runtimeType})');
+      if (updateData['acf']!['vesch-foto'] != null) {
+        print('vesch-foto: ${updateData['acf']!['vesch-foto']} (тип: ${updateData['acf']!['vesch-foto'].runtimeType})');
       }
+      if (updateData['acf']!['photo'] != null) {
+        print('photo: ${updateData['acf']!['photo']} (тип: ${updateData['acf']!['photo'].runtimeType})');
+      }
+      print('====================================');
 
-
-      // УБИРАЕМ json.encode из print - это может вызывать ошибку
-      print('Отправляемые данные для $itemId: $updateData');
-
-      // Отправляем на сервер
       final success = await widget.api.updateVeschi(itemId, updateData);
       
       if (showMessage) {
@@ -298,12 +295,9 @@ class _VeschiScreenState extends State<VeschiScreen> {
           ),
         );
       }
-      print('Ошибка при сохранении $itemId: $e');
+      print('ОШИБКА при сохранении $itemId: $e');
     }
   }
-
-
-
 
   // Функция для добавления новой вещи
   Future<void> _addNewVesch(BuildContext context) async {
@@ -435,7 +429,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Таблица Вещи'),
+        title: const Text('Таблица Вши'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -534,7 +528,9 @@ class _VeschiScreenState extends State<VeschiScreen> {
                                 ? const Icon(Icons.inventory_2_outlined, size: 24)
                                 : Stack(
                                     children: [
-                                      Container(color: Colors.black38),
+                                      Container(
+                                        color: Colors.black38,
+                                      ),
                                       const Icon(Icons.edit, color: Colors.white, size: 16),
                                     ],
                                   ),
@@ -568,7 +564,9 @@ class _VeschiScreenState extends State<VeschiScreen> {
                                 ? const Icon(Icons.person_outline, size: 24)
                                 : Stack(
                                     children: [
-                                      Container(color: Colors.black38),
+                                      Container(
+                                        color: Colors.black38,
+                                      ),
                                       const Icon(Icons.edit, color: Colors.white, size: 16),
                                     ],
                                   ),
