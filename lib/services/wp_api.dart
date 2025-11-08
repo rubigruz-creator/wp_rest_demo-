@@ -22,6 +22,8 @@ class WPApi {
         final List<dynamic> data = json.decode(response.body);
         return data;
       } else {
+        print('Ошибка загрузки данных: ${response.statusCode}');
+        print('Тело ответа: ${response.body}');
         throw Exception('Ошибка HTTP: ${response.statusCode}');
       }
     } catch (e) {
@@ -29,12 +31,12 @@ class WPApi {
     }
   }
 
-  // УПРОЩЕННЫЙ МЕТОД: Сохранение изменений в вещи
+  // Метод для сохранения изменений в вещи
   Future<bool> updateVeschi(int id, Map<String, dynamic> data) async {
     try {
       print('=== ОТЛАДКА API: Отправка данных ===');
       print('URL: $baseUrl/wp-json/wp/v2/veschi/$id');
-      print('Данные: ${json.encode(data)}');
+      print('Данные для отправки: ${json.encode(data)}');
       
       final response = await http.post(
         Uri.parse('$baseUrl/wp-json/wp/v2/veschi/$id'),
@@ -45,12 +47,32 @@ class WPApi {
         body: json.encode(data),
       );
 
-      print('Ответ сервера: ${response.statusCode}');
+      print('Статус ответа: ${response.statusCode}');
       print('Тело ответа: ${response.body}');
 
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        print('✅ Успешное обновление записи $id');
+        return true;
+      } else {
+        print('❌ Ошибка обновления: ${response.statusCode}');
+        
+        // Парсим ошибку для лучшего понимания
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map && errorData.containsKey('message')) {
+            print('Сообщение об ошибке: ${errorData['message']}');
+          }
+          if (errorData is Map && errorData.containsKey('code')) {
+            print('Код ошибки: ${errorData['code']}');
+          }
+        } catch (e) {
+          print('Не удалось распарсить ошибку: $e');
+        }
+        
+        return false;
+      }
     } catch (e) {
-      print('Исключение при сохранении: $e');
+      print('❌ Исключение при сохранении: $e');
       return false;
     }
   }
@@ -64,15 +86,28 @@ class WPApi {
         },
       );
 
-      return response.statusCode == 200;
+      print('Статус удаления: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        print('✅ Успешное удаление записи $id');
+        return true;
+      } else {
+        print('❌ Ошибка удаления: ${response.statusCode}');
+        print('Тело ответа: ${response.body}');
+        return false;
+      }
     } catch (e) {
-      print('Исключение при удалении: $e');
+      print('❌ Исключение при удалении: $e');
       return false;
     }
   }
 
   Future<Map<String, dynamic>?> uploadImage(File imageFile, String fileName) async {
     try {
+      print('=== Начало загрузки изображения ===');
+      print('Файл: ${imageFile.path}');
+      print('Имя файла: $fileName');
+      
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/wp-json/wp/v2/media'),
@@ -91,21 +126,29 @@ class WPApi {
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
 
+      print('Статус загрузки изображения: ${response.statusCode}');
+      
       if (response.statusCode == 201) {
-        return json.decode(responseData);
+        print('✅ Изображение успешно загружено');
+        final imageData = json.decode(responseData);
+        print('ID загруженного изображения: ${imageData['id']}');
+        return imageData;
       } else {
-        print('Ошибка загрузки изображения: ${response.statusCode}');
+        print('❌ Ошибка загрузки изображения: ${response.statusCode}');
         print('Тело ответа: $responseData');
         return null;
       }
     } catch (e) {
-      print('Исключение при загрузке изображения: $e');
+      print('❌ Исключение при загрузке изображения: $e');
       return null;
     }
   }
 
   Future<Map<String, dynamic>?> createVeschi(Map<String, dynamic> data) async {
     try {
+      print('=== Создание новой вещи ===');
+      print('Данные: ${json.encode(data)}');
+      
       final response = await http.post(
         Uri.parse('$baseUrl/wp-json/wp/v2/veschi'),
         headers: {
@@ -115,33 +158,19 @@ class WPApi {
         body: json.encode(data),
       );
 
+      print('Статус создания: ${response.statusCode}');
+      
       if (response.statusCode == 201) {
+        print('✅ Новая вещь успешно создана');
         return json.decode(response.body);
       } else {
-        print('Ошибка создания: ${response.statusCode}');
+        print('❌ Ошибка создания: ${response.statusCode}');
         print('Тело ответа: ${response.body}');
         return null;
       }
     } catch (e) {
-      print('Исключение при создании: $e');
+      print('❌ Исключение при создании: $e');
       return null;
-    }
-  }
-
-  Future<List<dynamic>> fetchPosts() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/wp-json/wp/v2/posts'),
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data;
-      } else {
-        throw Exception('Ошибка HTTP: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Ошибка загрузки постов: $e');
     }
   }
 }
