@@ -31,12 +31,14 @@ class WPApi {
     }
   }
 
-  // Метод для сохранения изменений в вещи
+
+
+  // Метод для сохранения изменений в вещи - С УЛУЧШЕННЫМ ЛОГИРОВАНИЕМ
   Future<bool> updateVeschi(int id, Map<String, dynamic> data) async {
     try {
-      print('=== ОТЛАДКА API: Отправка данных ===');
+      print('=== ОТПРАВКА НА СЕРВЕР ===');
       print('URL: $baseUrl/wp-json/wp/v2/veschi/$id');
-      print('Данные для отправки: ${json.encode(data)}');
+      print('Данные ACF: ${json.encode(data['acf'])}');
       
       final response = await http.post(
         Uri.parse('$baseUrl/wp-json/wp/v2/veschi/$id'),
@@ -51,24 +53,17 @@ class WPApi {
       print('Тело ответа: ${response.body}');
 
       if (response.statusCode == 200) {
-        print('✅ Успешное обновление записи $id');
+        print('✅ УСПЕШНО сохранено на сервере');
         return true;
       } else {
-        print('❌ Ошибка обновления: ${response.statusCode}');
-        
+        print('❌ ОШИБКА сервера: ${response.statusCode}');
         // Парсим ошибку для лучшего понимания
         try {
           final errorData = json.decode(response.body);
-          if (errorData is Map && errorData.containsKey('message')) {
-            print('Сообщение об ошибке: ${errorData['message']}');
-          }
-          if (errorData is Map && errorData.containsKey('code')) {
-            print('Код ошибки: ${errorData['code']}');
-          }
+          print('Детали ошибки: $errorData');
         } catch (e) {
-          print('Не удалось распарсить ошибку: $e');
+          print('Не удалось распарсить ошибку');
         }
-        
         return false;
       }
     } catch (e) {
@@ -76,6 +71,9 @@ class WPApi {
       return false;
     }
   }
+
+
+
 
   Future<bool> deleteVeschi(int id) async {
     try {
