@@ -16,13 +16,188 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'WP Rest Demo',
-      theme: ThemeData(primarySwatch: Colors.green),
-      home: VeschiScreen(api: api),
+      title: 'БАЗАР-ВОКЗАЛ',
+      theme: ThemeData.dark().copyWith(
+        // Темная тема с фиолетово-синим фоном
+        scaffoldBackgroundColor: const Color(0xFF0A0A2A), // Глубокий темно-синий
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1A1A3A), // Темно-синий с фиолетовым оттенком
+          titleTextStyle: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          elevation: 8,
+          shadowColor: Colors.orange,
+        ),
+        colorScheme: const ColorScheme.dark(
+          primary: Colors.orange, // Основной цвет - оранжевый
+          secondary: Colors.deepOrange, // Вторичный - темно-оранжевый
+          surface: Color(0xFF1A1A3A), // Поверхности
+          background: Color(0xFF0A0A2A), // Фон
+        ),
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Colors.white),
+          bodyMedium: TextStyle(color: Colors.white),
+          titleLarge: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        cardTheme: CardTheme(
+          color: const Color(0xFF1A1A3A),
+          elevation: 4,
+          shadowColor: Colors.orange.withOpacity(0.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFF1A1A3A),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Colors.orange, width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+      ),
+      home: SplashScreen(api: api), // Запускаем с загрузочного экрана
     );
   }
 }
 
+// ЗАГРУЗОЧНЫЙ ЭКРАН
+class SplashScreen extends StatelessWidget {
+  final WPApi api;
+  const SplashScreen({super.key, required this.api});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A2A), // Темно-синий фон
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF0A0A2A), // Темно-синий
+              Color(0xFF1A0A2A), // Темно-фиолетовый
+            ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Место для твоей картинки
+              Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.orange, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.5),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.flag,
+                  size: 100,
+                  color: Colors.orange,
+                ), // Замени на свою картинку
+              ),
+              const SizedBox(height: 40),
+              
+              // Текст ПРИВЕТ!!!
+              ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [Colors.red, Colors.orange, Colors.yellow],
+                  stops: [0.0, 0.5, 1.0],
+                ).createShader(bounds),
+                child: const Text(
+                  'ПРИВЕТ!!!',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Подзаголовок
+              Text(
+                'Добро пожаловать в БАЗАР-ВОКЗАЛ',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white.withOpacity(0.8),
+                ),
+              ),
+              const SizedBox(height: 60),
+              
+              // Кнопка ЖМИ СЮДА
+              Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Colors.red, Colors.orange],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.6),
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => VeschiScreen(api: api),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  child: const Text(
+                    'ЖМИ СЮДА',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ОСНОВНОЙ ЭКРАН ТАБЛИЦЫ (остальной код без изменений, только обновил AppBar)
 class VeschiScreen extends StatefulWidget {
   final WPApi api;
   const VeschiScreen({super.key, required this.api});
@@ -40,7 +215,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
   final Map<int, int> _veschFotoIds = {};
   final Map<int, int> _userPhotoIds = {};
 
-  // Глобальный ключ для безопасных сообщений
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = 
       GlobalKey<ScaffoldMessengerState>();
 
@@ -50,7 +224,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
     _loadData();
   }
 
-  // Оптимизированная загрузка данных
   void _loadData() {
     _futureVeschi = widget.api.fetchVeschi();
   }
@@ -63,7 +236,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
   }
 
-  // Простая функция для показа сообщений
   void _showMessage(String message, {bool isError = false}) {
     if (!mounted) return;
     
@@ -71,13 +243,12 @@ class _VeschiScreenState extends State<VeschiScreen> {
     _scaffoldMessengerKey.currentState?.showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? Colors.red : Colors.orange,
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
-  // Простая функция для показа сообщения о загрузке
   void _showLoadingMessage(String message) {
     if (!mounted) return;
     
@@ -100,7 +271,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
     for (final item in veschi) {
       final id = item['id'] as int;
       
-      // Инициализируем только если контроллеры еще не созданы
       if (!_veschNameControllers.containsKey(id)) {
         final veschName = _getAcfValue(item, 'vesch-name').toString();
         _veschNameControllers[id] = TextEditingController(text: veschName);
@@ -111,7 +281,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
         _nicknameControllers[id] = TextEditingController(text: nickname);
       }
       
-      // Всегда обновляем ID изображений из свежих данных
       final veschFoto = _getAcfValue(item, 'vesch-foto');
       final userPhoto = _getAcfValue(item, 'photo');
       
@@ -133,7 +302,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
   }
 
-  // НОВАЯ ФУНКЦИЯ: Форматирование таймера по новому формату
   String _formatTimer(String dateIso) {
     try {
       final created = DateTime.parse(dateIso);
@@ -144,14 +312,12 @@ class _VeschiScreenState extends State<VeschiScreen> {
       final hours = diff.inHours.remainder(24);
       final minutes = diff.inMinutes.remainder(60);
       
-      // Форматируем по новому формату: Дни - д, Часы - $, Минуты - ¢
       return '${days}д : ${hours}\$ : ${minutes}¢';
     } catch (e) {
       return '0д : 0\$ : 0¢';
     }
   }
 
-  // НОВАЯ ФУНКЦИЯ: Умное форматирование даты
   String _formatSmartDate(String dateIso) {
     try {
       final date = DateTime.parse(dateIso);
@@ -165,7 +331,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
       } else if (dateDay == yesterday) {
         return 'Вчера';
       } else {
-        // Форматируем дату: день.месяц.год час:минуты
         return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}\n${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
       }
     } catch (e) {
@@ -199,7 +364,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
 
   String _getImageUrl(dynamic imageField) {
     if (imageField == null || imageField == '' || imageField == 'false') {
-      return ''; // Пустая строка вместо внешнего URL
+      return '';
     }
     
     try {
@@ -232,27 +397,30 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
   }
 
-  // Функция для выбора источника
   Future<void> _showImageSourceDialog(int itemId, String fieldType) async {
     await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Выберите источник ${fieldType == 'vesch-foto' ? 'фото вещи' : 'фото юзера'}'),
+          backgroundColor: const Color(0xFF1A1A3A),
+          title: Text(
+            'Выберите источник ${fieldType == 'vesch-foto' ? 'фото вещи' : 'фото юзера'}',
+            style: const TextStyle(color: Colors.white),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.blue),
-                title: const Text('Галерея'),
+                leading: const Icon(Icons.photo_library, color: Colors.orange),
+                title: const Text('Галерея', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.of(context).pop();
                   _pickAndUploadImage(itemId, fieldType, ImageSource.gallery);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.camera_alt, color: Colors.green),
-                title: const Text('Камера'),
+                leading: const Icon(Icons.camera_alt, color: Colors.orange),
+                title: const Text('Камера', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.of(context).pop();
                   _pickAndUploadImage(itemId, fieldType, ImageSource.camera);
@@ -265,16 +433,15 @@ class _VeschiScreenState extends State<VeschiScreen> {
     );
   }
 
-  // Оптимизированная функция загрузки изображения
   Future<void> _pickAndUploadImage(int itemId, String fieldType, ImageSource source) async {
     try {
       _showLoadingMessage('${source == ImageSource.camera ? 'Съемка' : 'Загрузка'} ${fieldType == 'vesch-foto' ? 'фото вещи' : 'фото юзера'}...');
 
       final XFile? pickedFile = await _imagePicker.pickImage(
         source: source,
-        maxWidth: 400, // Еще меньше для скорости
+        maxWidth: 400,
         maxHeight: 400,
-        imageQuality: 60, // Еще меньше качество
+        imageQuality: 60,
       );
 
       if (pickedFile != null) {
@@ -292,7 +459,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
             _userPhotoIds[itemId] = imageId;
           }
           
-          // Сохраняем изменения и ОБНОВЛЯЕМ данные
           await _saveChanges(itemId, shouldRefresh: true);
           
           _showMessage('${fieldType == 'vesch-foto' ? 'Фото вещи' : 'Фото юзера'} обновлено!');
@@ -307,7 +473,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
   }
 
-  // Оптимизированная функция сохранения
   Future<void> _saveChanges(int itemId, {bool showMessage = true, bool shouldRefresh = false}) async {
     final veschName = _veschNameControllers[itemId]?.text ?? '';
     final nickname = _nicknameControllers[itemId]?.text ?? '';
@@ -324,7 +489,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
         }
       };
 
-      // Преобразуем ID в строки
       if (_veschFotoIds.containsKey(itemId) && _veschFotoIds[itemId] != null) {
         final imageId = _veschFotoIds[itemId]!;
         updateData['acf']!['vesch_foto'] = imageId.toString();
@@ -342,7 +506,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
         if (success) {
           _showMessage('Сохранено!');
           
-          // ОБНОВЛЯЕМ данные если нужно
           if (shouldRefresh) {
             _refreshData();
           }
@@ -358,7 +521,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
   }
 
-  // Функция добавления
   Future<void> _addNewVesch() async {
     try {
       _showLoadingMessage('Создание новой вещи...');
@@ -379,7 +541,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
 
       if (createdVesch != null) {
         _showMessage('Новая вещь создана!');
-        _refreshData(); // Авто-обновление
+        _refreshData();
       } else {
         _showMessage('Ошибка создания', isError: true);
       }
@@ -388,17 +550,18 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
   }
 
-  // Функция удаления
   Future<void> _deleteItem(int itemId) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Удалить вещь?'),
-        content: Text('Вы уверены, что хотите удалить вещь #$itemId?'),
+        backgroundColor: const Color(0xFF1A1A3A),
+        title: const Text('Удалить вещь?', style: TextStyle(color: Colors.white)),
+        content: Text('Вы уверены, что хотите удалить вещь #$itemId?', 
+            style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Отмена'),
+            child: const Text('Отмена', style: TextStyle(color: Colors.orange)),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
@@ -416,7 +579,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
         
         if (success) {
           _showMessage('Удалено!');
-          _refreshData(); // Авто-обновление
+          _refreshData();
         } else {
           _showMessage('Ошибка удаления', isError: true);
         }
@@ -432,236 +595,319 @@ class _VeschiScreenState extends State<VeschiScreen> {
       key: _scaffoldMessengerKey,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Таблица Вещей'),
+          // НАЗВАНИЕ БАЗАР-ВОКЗАЛ с огненным градиентом
+          title: ShaderMask(
+            shaderCallback: (bounds) => const LinearGradient(
+              colors: [Colors.red, Colors.orange, Colors.yellow],
+              stops: [0.0, 0.5, 1.0],
+            ).createShader(bounds),
+            child: const Text(
+              'БАЗАР-ВОКЗАЛ',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh, color: Colors.orange),
               onPressed: _refreshData,
               tooltip: 'Обновить данные',
             ),
           ],
         ),
-        body: FutureBuilder<List<dynamic>>(
-          future: _futureVeschi,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Загрузка данных...'),
-                  ],
-                ),
-              );
-            }
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF0A0A2A),
+                Color(0xFF1A0A2A),
+              ],
+            ),
+          ),
+          child: FutureBuilder<List<dynamic>>(
+            future: _futureVeschi,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(color: Colors.orange),
+                      SizedBox(height: 16),
+                      Text('Загрузка данных...', style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                );
+              }
 
-            if (snapshot.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                    const SizedBox(height: 16),
-                    Text('Ошибка загрузки', style: Theme.of(context).textTheme.headlineSmall),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${snapshot.error}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: _refreshData,
-                      label: const Text('Повторить'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final veschi = snapshot.data ?? [];
-            if (veschi.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    const Text('Нет данных'),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.add),
-                      onPressed: _addNewVesch,
-                      label: const Text('Добавить первую вещь'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            _initializeControllers(veschi);
-
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: DataTable(
-                  columnSpacing: 12,
-                  horizontalMargin: 12,
-                  dataRowMinHeight: 70,
-                  dataRowMaxHeight: 90,
-                  columns: const [
-                    DataColumn(label: Text('ID', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Фото\nВещи', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Название\nВещи', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Фото\nЮзера', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Прозвище', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Время - Деньги', style: TextStyle(fontWeight: FontWeight.bold))), // ОБЪЕДИНЕННАЯ КОЛОНКА
-                    DataColumn(label: Text('Действия', style: TextStyle(fontWeight: FontWeight.bold))),
-                  ],
-                  rows: veschi.map((item) {
-                    final id = item['id'] as int;
-                    final dateIso = item['date'] ?? '';
-                    
-                    final veschFotoUrl = _getImageUrl(_getAcfValue(item, 'vesch-foto'));
-                    final userPhotoUrl = _getImageUrl(_getAcfValue(item, 'photo'));
-                    
-                    return DataRow(
-                      cells: [
-                        DataCell(
-                          Text(id.toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
+              if (snapshot.hasError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 64, color: Colors.orange),
+                      const SizedBox(height: 16),
+                      const Text('Ошибка загрузки', style: TextStyle(color: Colors.white, fontSize: 20)),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.refresh, color: Colors.orange),
+                        onPressed: _refreshData,
+                        label: const Text('Повторить', style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange.withOpacity(0.2),
                         ),
-                        DataCell(
-                          GestureDetector(
-                            onTap: () => _showImageSourceDialog(id, 'vesch-foto'),
-                            child: CircleAvatar(
-                              radius: 28,
-                              backgroundColor: Colors.grey[200],
-                              backgroundImage: veschFotoUrl.isNotEmpty 
-                                  ? NetworkImage(veschFotoUrl) 
-                                  : null,
-                              child: veschFotoUrl.isEmpty 
-                                  ? const Icon(Icons.add_a_photo, size: 20, color: Colors.grey)
-                                  : null,
-                            ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final veschi = snapshot.data ?? [];
+              if (veschi.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.inventory_2_outlined, size: 64, color: Colors.orange),
+                      const SizedBox(height: 16),
+                      const Text('Нет данных', style: TextStyle(color: Colors.white)),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.add, color: Colors.white),
+                        onPressed: _addNewVesch,
+                        label: const Text('Добавить первую вещь', style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
                           ),
                         ),
-                        DataCell(
-                          SizedBox(
-                            width: 130,
-                            child: TextField(
-                              controller: _veschNameControllers[id],
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                isDense: true,
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              _initializeControllers(veschi);
+
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: DataTable(
+                    columnSpacing: 12,
+                    horizontalMargin: 12,
+                    dataRowMinHeight: 70,
+                    dataRowMaxHeight: 90,
+                    headingTextStyle: const TextStyle(
+                      color: Colors.orange,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                    dataTextStyle: const TextStyle(color: Colors.white),
+                    columns: const [
+                      DataColumn(label: Text('ID')),
+                      DataColumn(label: Text('Фото\nВещи')),
+                      DataColumn(label: Text('Название\nВещи')),
+                      DataColumn(label: Text('Фото\nЮзера')),
+                      DataColumn(label: Text('Прозвище')),
+                      DataColumn(label: Text('Время - Деньги')),
+                      DataColumn(label: Text('Действия')),
+                    ],
+                    rows: veschi.map((item) {
+                      final id = item['id'] as int;
+                      final dateIso = item['date'] ?? '';
+                      
+                      final veschFotoUrl = _getImageUrl(_getAcfValue(item, 'vesch-foto'));
+                      final userPhotoUrl = _getImageUrl(_getAcfValue(item, 'photo'));
+                      
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            Text(id.toString(), style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                          ),
+                          DataCell(
+                            GestureDetector(
+                              onTap: () => _showImageSourceDialog(id, 'vesch-foto'),
+                              child: CircleAvatar(
+                                radius: 28,
+                                backgroundColor: Colors.grey[800],
+                                backgroundImage: veschFotoUrl.isNotEmpty 
+                                    ? NetworkImage(veschFotoUrl) 
+                                    : null,
+                                child: veschFotoUrl.isEmpty 
+                                    ? const Icon(Icons.add_a_photo, size: 20, color: Colors.orange)
+                                    : null,
                               ),
-                              maxLines: 2,
-                              style: const TextStyle(fontSize: 12),
                             ),
                           ),
-                        ),
-                        DataCell(
-                          GestureDetector(
-                            onTap: () => _showImageSourceDialog(id, 'photo'),
-                            child: CircleAvatar(
-                              radius: 28,
-                              backgroundColor: Colors.grey[200],
-                              backgroundImage: userPhotoUrl.isNotEmpty 
-                                  ? NetworkImage(userPhotoUrl) 
-                                  : null,
-                              child: userPhotoUrl.isEmpty 
-                                  ? const Icon(Icons.add_a_photo, size: 20, color: Colors.grey)
-                                  : null,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          SizedBox(
-                            width: 90,
-                            child: TextField(
-                              controller: _nicknameControllers[id],
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                isDense: true,
-                              ),
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ),
-                        ),
-                        // ОБЪЕДИНЕННАЯ ЯЧЕЙКА: Дата и Таймер
-                        DataCell(
-                          Container(
-                            width: 100,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                // Верхняя строка: Умная дата
-                                Text(
-                                  _formatSmartDate(dateIso),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue,
+                          DataCell(
+                            SizedBox(
+                              width: 130,
+                              child: TextField(
+                                controller: _veschNameControllers[id],
+                                style: const TextStyle(color: Colors.white, fontSize: 12),
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                  isDense: true,
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Colors.orange),
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
-                                const SizedBox(height: 4),
-                                // Нижняя строка: Таймер в новом формате
-                                Text(
-                                  _formatTimer(dateIso),
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontFamily: 'monospace',
-                                    color: Colors.green,
+                                maxLines: 2,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            GestureDetector(
+                              onTap: () => _showImageSourceDialog(id, 'photo'),
+                              child: CircleAvatar(
+                                radius: 28,
+                                backgroundColor: Colors.grey[800],
+                                backgroundImage: userPhotoUrl.isNotEmpty 
+                                    ? NetworkImage(userPhotoUrl) 
+                                    : null,
+                                child: userPhotoUrl.isEmpty 
+                                    ? const Icon(Icons.add_a_photo, size: 20, color: Colors.orange)
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: 90,
+                              child: TextField(
+                                controller: _nicknameControllers[id],
+                                style: const TextStyle(color: Colors.white, fontSize: 12),
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                  isDense: true,
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Colors.orange),
                                   ),
-                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Container(
+                              width: 100,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _formatSmartDate(dateIso),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatTimer(dateIso),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontFamily: 'monospace',
+                                      color: Colors.yellow,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Кнопка сохранить с огненным стилем
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Colors.green, Colors.lightGreen],
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.save, color: Colors.white, size: 18),
+                                    onPressed: () => _saveChanges(id),
+                                    tooltip: 'Сохранить',
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                // Кнопка удалить с огненным стилем
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Colors.red, Colors.orange],
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.white, size: 18),
+                                    onPressed: () => _deleteItem(id),
+                                    tooltip: 'Удалить',
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                        DataCell(
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.save, color: Colors.green, size: 20),
-                                onPressed: () => _saveChanges(id),
-                                tooltip: 'Сохранить',
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                                onPressed: () => _deleteItem(id),
-                                tooltip: 'Удалить',
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
+                        ],
+                      );
+                    }).toList(),
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _addNewVesch,
-          tooltip: 'Добавить новую вещь',
-          child: const Icon(Icons.add),
+        // Кнопка добавить с огненным градиентом
+        floatingActionButton: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Colors.red, Colors.orange],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.orange.withOpacity(0.6),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: FloatingActionButton(
+            onPressed: _addNewVesch,
+            tooltip: 'Добавить новую вещь',
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            child: const Icon(Icons.add, color: Colors.white, size: 30),
+          ),
         ),
       ),
     );
   }
 }
 
-// Обновленный виджет таймера
 class TimerWidget extends StatefulWidget {
   final String dateIso;
   final String Function(String) formatTimer;
@@ -684,7 +930,7 @@ class _TimerWidgetState extends State<TimerWidget> {
   }
 
   void _startTimer() {
-    Future.delayed(const Duration(seconds: 1), () {
+    Future.delayed(const Duration(minutes: 1), () {
       if (mounted) {
         setState(() {});
         _startTimer();
@@ -696,7 +942,7 @@ class _TimerWidgetState extends State<TimerWidget> {
   Widget build(BuildContext context) {
     return Text(
       widget.formatTimer(widget.dateIso),
-      style: const TextStyle(fontFamily: 'monospace', fontSize: 10),
+      style: const TextStyle(fontFamily: 'monospace', fontSize: 10, color: Colors.yellow),
     );
   }
 }
