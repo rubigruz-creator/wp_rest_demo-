@@ -7,7 +7,6 @@ class WPApi {
 
   WPApi(this.baseUrl);
 
-  // Твой JWT токен
   final String jwtToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F6b25iYXphLnJ1IiwiaWF0IjoxNzYyMzI4MjI2LCJuYmYiOjE3NjIzMjgyMjYsImV4cCI6MTc2MjkzMzAyNiwiZGF0YSI6eyJ1c2VyIjp7ImlkIjoiMSJ9fX0.Fpb6nwBI96apfZvXDW_ep8h30eqp0IDDSUGZuWJKavk';
 
   Future<List<dynamic>> fetchVeschi() async {
@@ -23,6 +22,8 @@ class WPApi {
         final List<dynamic> data = json.decode(response.body);
         return data;
       } else {
+        print('Ошибка загрузки данных: ${response.statusCode}');
+        print('Тело ответа: ${response.body}');
         throw Exception('Ошибка HTTP: ${response.statusCode}');
       }
     } catch (e) {
@@ -30,11 +31,12 @@ class WPApi {
     }
   }
 
-  // Сохранение изменений в вещи
+  // Метод для сохранения изменений в вещи
   Future<bool> updateVeschi(int id, Map<String, dynamic> data) async {
     try {
-      // Используем очистку типов данных
-      final Map<String, dynamic> cleanedData = _cleanDataTypes(data);
+      print('=== ОТЛАДКА API: Отправка данных ===');
+      print('URL: $baseUrl/wp-json/wp/v2/veschi/$id');
+      print('Данные для отправки: ${json.encode(data)}');
       
       final response = await http.post(
         Uri.parse('$baseUrl/wp-json/wp/v2/veschi/$id'),
@@ -42,25 +44,39 @@ class WPApi {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $jwtToken',
         },
-        body: json.encode(cleanedData),
+        body: json.encode(data),
       );
 
+      print('Статус ответа: ${response.statusCode}');
+      print('Тело ответа: ${response.body}');
+
       if (response.statusCode == 200) {
+        print('✅ Успешное обновление записи $id');
         return true;
       } else {
-        print('Ошибка сохранения: ${response.statusCode}');
-        print('Тело ответа: ${response.body}');
+        print('❌ Ошибка обновления: ${response.statusCode}');
+        
+        // Парсим ошибку для лучшего понимания
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map && errorData.containsKey('message')) {
+            print('Сообщение об ошибке: ${errorData['message']}');
+          }
+          if (errorData is Map && errorData.containsKey('code')) {
+            print('Код ошибки: ${errorData['code']}');
+          }
+        } catch (e) {
+          print('Не удалось распарсить ошибку: $e');
+        }
+        
         return false;
       }
     } catch (e) {
-      print('Исключение при сохранении: $e');
+      print('❌ Исключение при сохранении: $e');
       return false;
     }
   }
 
-
-
-  // Удаление вещи
   Future<bool> deleteVeschi(int id) async {
     try {
       final response = await http.delete(
@@ -70,16 +86,28 @@ class WPApi {
         },
       );
 
-      return response.statusCode == 200;
+      print('Статус удаления: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        print('✅ Успешное удаление записи $id');
+        return true;
+      } else {
+        print('❌ Ошибка удаления: ${response.statusCode}');
+        print('Тело ответа: ${response.body}');
+        return false;
+      }
     } catch (e) {
-      print('Исключение при удалении: $e');
+      print('❌ Исключение при удалении: $e');
       return false;
     }
   }
 
-  // НОВЫЙ МЕТОД: Загрузка изображения в медиатеку
   Future<Map<String, dynamic>?> uploadImage(File imageFile, String fileName) async {
     try {
+      print('=== Начало загрузки изображения ===');
+      print('Файл: ${imageFile.path}');
+      print('Имя файла: $fileName');
+      
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/wp-json/wp/v2/media'),
@@ -98,22 +126,29 @@ class WPApi {
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
 
+      print('Статус загрузки изображения: ${response.statusCode}');
+      
       if (response.statusCode == 201) {
-        return json.decode(responseData);
+        print('✅ Изображение успешно загружено');
+        final imageData = json.decode(responseData);
+        print('ID загруженного изображения: ${imageData['id']}');
+        return imageData;
       } else {
-        print('Ошибка загрузки изображения: ${response.statusCode}');
+        print('❌ Ошибка загрузки изображения: ${response.statusCode}');
         print('Тело ответа: $responseData');
         return null;
       }
     } catch (e) {
-      print('Исключение при загрузке изображения: $e');
+      print('❌ Исключение при загрузке изображения: $e');
       return null;
     }
   }
 
-  // НОВЫЙ МЕТОД: Создание новой вещи
   Future<Map<String, dynamic>?> createVeschi(Map<String, dynamic> data) async {
     try {
+      print('=== Создание новой вещи ===');
+      print('Данные: ${json.encode(data)}');
+      
       final response = await http.post(
         Uri.parse('$baseUrl/wp-json/wp/v2/veschi'),
         headers: {
@@ -123,74 +158,19 @@ class WPApi {
         body: json.encode(data),
       );
 
+      print('Статус создания: ${response.statusCode}');
+      
       if (response.statusCode == 201) {
+        print('✅ Новая вещь успешно создана');
         return json.decode(response.body);
       } else {
-        print('Ошибка создания: ${response.statusCode}');
+        print('❌ Ошибка создания: ${response.statusCode}');
         print('Тело ответа: ${response.body}');
         return null;
       }
     } catch (e) {
-      print('Исключение при создании: $e');
+      print('❌ Исключение при создании: $e');
       return null;
     }
   }
-
-  // Старый метод для постов (оставим на всякий случай)
-  Future<List<dynamic>> fetchPosts() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/wp-json/wp/v2/posts'),
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data;
-      } else {
-        throw Exception('Ошибка HTTP: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Ошибка загрузки постов: $e');
-    }
-  }
-
-
-  // В классе WPApi добавь этот метод:
-  Map<String, dynamic> _cleanDataTypes(Map<String, dynamic> data) {
-    final Map<String, dynamic> cleaned = Map<String, dynamic>.from(data);
-    
-    if (cleaned.containsKey('acf') && cleaned['acf'] is Map) {
-      final acfData = Map<String, dynamic>.from(cleaned['acf']);
-      
-      // Убеждаемся что поля с изображениями - это числа
-      if (acfData.containsKey('vesch-foto') && acfData['vesch-foto'] != null) {
-        if (acfData['vesch-foto'] is String) {
-          final intValue = int.tryParse(acfData['vesch-foto']);
-          if (intValue != null) {
-            acfData['vesch-foto'] = intValue;
-          } else {
-            acfData.remove('vesch-foto');
-          }
-        }
-        // Если уже число - оставляем как есть
-      }
-      
-      if (acfData.containsKey('photo') && acfData['photo'] != null) {
-        if (acfData['photo'] is String) {
-          final intValue = int.tryParse(acfData['photo']);
-          if (intValue != null) {
-            acfData['photo'] = intValue;
-          } else {
-            acfData.remove('photo');
-          }
-        }
-      }
-      
-      cleaned['acf'] = acfData;
-    }
-    
-    return cleaned;
-  }
-
-  
 }
