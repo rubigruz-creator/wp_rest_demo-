@@ -1,10 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+//import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import '../services/wp_api.dart';
 import 'image_viewer_screen.dart';
 import '../widgets/editable_image.dart';
+import '../widgets/file_upload_widget.dart';
+import '../widgets/file_management_dialog.dart';
+import 'package:flutter/services.dart'; // ДЛЯ Clipboard
 
 class VeschiScreen extends StatefulWidget {
   final WPApi api;
@@ -22,6 +27,11 @@ class _VeschiScreenState extends State<VeschiScreen> {
   final Map<int, TextEditingController> _nicknameControllers = {};
   final Map<int, int> _veschFotoIds = {};
   final Map<int, int> _userPhotoIds = {};
+  
+  // НОВЫЕ ПОЛЯ ДЛЯ ФАЙЛОВ
+  final Map<int, int> _custFileIds = {};
+  final Map<int, String> _custFileUrls = {};
+  final Map<int, String> _custFileNames = {};
 
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = 
       GlobalKey<ScaffoldMessengerState>();
@@ -105,6 +115,24 @@ class _VeschiScreenState extends State<VeschiScreen> {
           _userPhotoIds[id] = userPhoto['id'] as int;
         } else if (userPhoto is int) {
           _userPhotoIds[id] = userPhoto;
+        }
+      }
+      
+      // НОВОЕ: Инициализация файлов
+      final custFile = _getAcfValue(item, 'cust-files');
+      if (custFile != null && custFile != '' && custFile != 'false') {
+        if (custFile is Map) {
+          if (custFile['id'] != null) {
+            _custFileIds[id] = custFile['id'] as int;
+          }
+          if (custFile['url'] != null) {
+            _custFileUrls[id] = custFile['url'] as String;
+          }
+          if (custFile['filename'] != null) {
+            _custFileNames[id] = custFile['filename'] as String;
+          } else if (custFile['title'] != null) {
+            _custFileNames[id] = custFile['title'] as String;
+          }
         }
       }
     }
@@ -205,7 +233,42 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
   }
 
-  // НОВЫЕ МЕТОДЫ ДЛЯ РАБОТЫ С ИЗОБРАЖЕНИЯМИ
+
+  // ДОБАВЬТЕ ЭТОТ МЕТОД ЗДЕСЬ ↓
+  // НОВЫЙ МЕТОД: Получить тип файла для лучшего отображения
+  String _getFileType(String fileName) {
+    final extension = fileName.toLowerCase().split('.').last;
+    
+    switch (extension) {
+      case 'pdf':
+        return 'PDF документ';
+      case 'doc':
+      case 'docx':
+        return 'Word документ';
+      case 'xls':
+      case 'xlsx':
+        return 'Excel таблица';
+      case 'zip':
+      case 'rar':
+        return 'Архив';
+      case 'txt':
+        return 'Текстовый файл';
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return 'Изображение';
+      default:
+        return 'Файл';
+    }
+  }
+
+  // Дальше идут остальные методы...
+
+
+
+
+  // МЕТОДЫ ДЛЯ РАБОТЫ С ИЗОБРАЖЕНИЯМИ
 
   Future<void> _showImageSourceDialog(int itemId, String fieldType) async {
     await showDialog(
@@ -361,6 +424,295 @@ class _VeschiScreenState extends State<VeschiScreen> {
     _showImageSourceDialog(itemId, fieldType);
   }
 
+  // НОВЫЕ МЕТОДЫ ДЛЯ РАБОТЫ С ФАЙЛАМИ
+
+  void _showFileManagementDialog(int itemId) {
+    final hasFile = _custFileIds.containsKey(itemId) && _custFileIds[itemId] != null;
+    final fileUrl = _custFileUrls[itemId];
+    final fileName = _custFileNames[itemId];
+    final fileType = fileName != null ? _getFileType(fileName) : 'Неизвестный тип';
+
+    showDialog(
+      context: context,
+      builder: (context) => FileManagementDialog(
+        fileName: fileName,
+        fileUrl: fileUrl,
+        hasFile: hasFile,
+        fileType: fileType, // ДОБАВЛЯЕМ ТИП ФАЙЛА
+        onUpload: () {
+          Navigator.pop(context);
+          _showFileSourceDialog(itemId);
+        },
+        onDownload: () {
+          Navigator.pop(context);
+          _downloadFile(itemId);
+        },
+        onDelete: () {
+          Navigator.pop(context);
+          _deleteFile(itemId);
+        },
+        onClose: () => Navigator.pop(context),
+      ),
+    );
+  }
+
+
+
+
+
+  void _showFileSourceDialog(int itemId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A3A),
+        title: const Text(
+          'Выберите файл',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.folder_open, color: Colors.orange),
+              title: const Text('Файлы устройства', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndUploadFile(itemId);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  Future<void> _pickAndUploadFile(int itemId) async {
+    try {
+      // Временное решение - используем выбор изображения как файла
+      _showLoadingMessage('Выбор файла...');
+
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        requestFullMetadata: false,
+      );
+
+      if (pickedFile != null) {
+        final File file = File(pickedFile.path);
+        final fileName = 'cust_file_${itemId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        
+        _showLoadingMessage('Загрузка файла...');
+
+        final uploadedFile = await widget.api.uploadFile(file, fileName);
+
+        if (uploadedFile != null) {
+          final fileId = uploadedFile['id'] as int;
+          final fileUrl = uploadedFile['source_url'] as String;
+          final fileName = uploadedFile['title']?['rendered'] as String? ?? 'file';
+          
+          _custFileIds[itemId] = fileId;
+          _custFileUrls[itemId] = fileUrl;
+          _custFileNames[itemId] = fileName;
+          
+          await _saveChanges(itemId, shouldRefresh: true);
+          
+          _showMessage('Файл успешно загружен!');
+        } else {
+          _showMessage('Ошибка загрузки файла', isError: true);
+        }
+      } else {
+        _showMessage('Выбор файла отменен');
+      }
+    } catch (e) {
+      _showMessage('Ошибка: $e', isError: true);
+    }
+  }
+
+
+Future<void> _downloadFile(int itemId) async {
+  if (!_custFileUrls.containsKey(itemId)) {
+    _showMessage('Файл не найден', isError: true);
+    return;
+  }
+
+  final fileUrl = _custFileUrls[itemId]!;
+  final fileName = _custFileNames[itemId] ?? 'download';
+
+  try {
+    _showLoadingMessage('Открытие файла...');
+
+    print('=== СКАЧИВАНИЕ ФАЙЛА ===');
+    print('URL: $fileUrl');
+    print('Имя файла: $fileName');
+
+    // Проверяем, можно ли открыть URL
+    if (await canLaunchUrl(Uri.parse(fileUrl))) {
+      // Пытаемся открыть в браузере/внешнем приложении
+      final launched = await launchUrl(
+        Uri.parse(fileUrl),
+        mode: LaunchMode.externalApplication, // Важно: открываем во внешнем приложении
+      );
+      
+      if (launched) {
+        _showMessage('Файл открывается...');
+      } else {
+        _showMessage('Не удалось открыть файл. Попробуйте вручную.', isError: true);
+      }
+    } else {
+      // Если не получается открыть напрямую, показываем диалог с копированием ссылки
+      _showDownloadOptions(fileUrl, fileName, itemId);
+    }
+  } catch (e) {
+    print('Ошибка при открытии файла: $e');
+    _showDownloadOptions(fileUrl, fileName, itemId);
+  }
+}
+
+// НОВЫЙ МЕТОД: Показать опции скачивания
+void _showDownloadOptions(String fileUrl, String fileName, int itemId) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: const Color(0xFF1A1A3A),
+      title: const Text(
+        'Скачать файл',
+        style: TextStyle(color: Colors.white),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Файл: $fileName',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Выберите способ скачивания:',
+            style: TextStyle(color: Colors.white),
+          ),
+        ],
+      ),
+      actions: [
+        // Кнопка копирования ссылки
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+            _copyDownloadLink(fileUrl);
+          },
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.link, color: Colors.orange, size: 18),
+              SizedBox(width: 8),
+              Text('Копировать ссылку', style: TextStyle(color: Colors.orange)),
+            ],
+          ),
+        ),
+        // Кнопка открытия в браузере
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+            _openInBrowser(fileUrl);
+          },
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.open_in_browser, color: Colors.blue, size: 18),
+              SizedBox(width: 8),
+              Text('Открыть в браузере', style: TextStyle(color: Colors.blue)),
+            ],
+          ),
+        ),
+        // Кнопка отмены
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена', style: TextStyle(color: Colors.grey)),
+        ),
+      ],
+    ),
+  );
+}
+
+// НОВЫЙ МЕТОД: Копировать ссылку в буфер обмена
+Future<void> _copyDownloadLink(String fileUrl) async {
+  try {
+    await Clipboard.setData(ClipboardData(text: fileUrl));
+    _showMessage('Ссылка скопирована в буфер обмена!');
+  } catch (e) {
+    _showMessage('Ошибка копирования: $e', isError: true);
+  }
+}
+
+// НОВЫЙ МЕТОД: Открыть в браузере
+Future<void> _openInBrowser(String fileUrl) async {
+  try {
+    final launched = await launchUrl(
+      Uri.parse(fileUrl),
+      mode: LaunchMode.externalApplication,
+    );
+    
+    if (!launched) {
+      _showMessage('Не удалось открыть браузер', isError: true);
+    }
+  } catch (e) {
+    _showMessage('Ошибка: $e', isError: true);
+  }
+}
+
+
+
+
+  Future<void> _deleteFile(int itemId) async {
+    if (!_custFileIds.containsKey(itemId)) {
+      _showMessage('Файл не найден', isError: true);
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A3A),
+        title: const Text('Удалить файл?', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Вы уверены, что хотите удалить файл "${_custFileNames[itemId] ?? 'файл'}"?',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Отмена', style: TextStyle(color: Colors.orange)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      _showLoadingMessage('Удаление файла...');
+
+      try {
+        final fileId = _custFileIds[itemId]!;
+        final success = await widget.api.deleteFile(fileId);
+
+        if (success) {
+          _custFileIds.remove(itemId);
+          _custFileUrls.remove(itemId);
+          _custFileNames.remove(itemId);
+          
+          await _saveChanges(itemId, shouldRefresh: true);
+          _showMessage('Файл удален!');
+        } else {
+          _showMessage('Ошибка удаления файла', isError: true);
+        }
+      } catch (e) {
+        _showMessage('Ошибка: $e', isError: true);
+      }
+    }
+  }
+
   Future<void> _saveChanges(int itemId, {bool showMessage = true, bool shouldRefresh = false}) async {
     final veschName = _veschNameControllers[itemId]?.text ?? '';
     final nickname = _nicknameControllers[itemId]?.text ?? '';
@@ -385,6 +737,12 @@ class _VeschiScreenState extends State<VeschiScreen> {
       if (_userPhotoIds.containsKey(itemId) && _userPhotoIds[itemId] != null) {
         final imageId = _userPhotoIds[itemId]!;
         updateData['acf']!['photo'] = imageId.toString();
+      }
+
+      // НОВОЕ: Добавляем файл
+      if (_custFileIds.containsKey(itemId) && _custFileIds[itemId] != null) {
+        final fileId = _custFileIds[itemId]!;
+        updateData['acf']!['cust-files'] = fileId.toString();
       }
 
       final success = await widget.api.updateVeschi(itemId, updateData);
@@ -609,6 +967,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
                       DataColumn(label: Text('Название\nВещи')),
                       DataColumn(label: Text('Фото\nЮзера')),
                       DataColumn(label: Text('Прозвище')),
+                      DataColumn(label: Text('Файл')), // НОВАЯ КОЛОНКА
                       DataColumn(label: Text('Время - Деньги')),
                       DataColumn(label: Text('Действия')),
                     ],
@@ -680,6 +1039,19 @@ class _VeschiScreenState extends State<VeschiScreen> {
                                   ),
                                 ),
                               ),
+                            ),
+                          ),
+                          // НОВАЯ ЯЧЕЙКА ДЛЯ ФАЙЛА
+                          DataCell(
+                            FileUploadWidget(
+                              fileUrl: _custFileUrls[id],
+                              fileName: _custFileNames[id],
+                              hasFile: _custFileIds.containsKey(id) && _custFileIds[id] != null,
+                              onTap: () => _showFileManagementDialog(id),
+                              onUpload: () => _showFileSourceDialog(id),
+                              onDownload: () => _downloadFile(id),
+                              onDelete: () => _deleteFile(id),
+                              size: 40,
                             ),
                           ),
                           DataCell(

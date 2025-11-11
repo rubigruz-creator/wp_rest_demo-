@@ -31,7 +31,6 @@ class WPApi {
     }
   }
 
-  // ИСПРАВЛЕННЫЙ МЕТОД ДЛЯ ACF ПОЛЕЙ
   Future<bool> updateVeschi(int id, Map<String, dynamic> data) async {
     try {
       print('=== ОТПРАВКА НА СЕРВЕР ДЛЯ ACF ===');
@@ -78,6 +77,7 @@ class WPApi {
           print('nickname: ${acfFields['nickname']}');
           print('vesch-foto: ${acfFields['vesch-foto']}');
           print('photo: ${acfFields['photo']}');
+          print('cust-files: ${acfFields['cust-files']}');
         } catch (e) {
           print('Не удалось распарсить ответ для проверки: $e');
         }
@@ -163,6 +163,76 @@ class WPApi {
     } catch (e) {
       print('❌ Исключение при загрузке изображения: $e');
       return null;
+    }
+  }
+
+  // НОВЫЙ МЕТОД ДЛЯ ЗАГРУЗКИ ФАЙЛОВ (ИСПРАВЛЕННЫЙ)
+  Future<Map<String, dynamic>?> uploadFile(File file, String fileName) async {
+    try {
+      print('=== Начало загрузки файла ===');
+      print('Файл: ${file.path}');
+      print('Имя файла: $fileName');
+      
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/wp-json/wp/v2/media'),
+      );
+      
+      request.headers['Authorization'] = 'Bearer $jwtToken';
+      
+      // ПРОСТАЯ ЗАГРУЗКА БЕЗ MIME-TYPE
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          file.path,
+          filename: fileName,
+        ),
+      );
+
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+
+      print('Статус загрузки файла: ${response.statusCode}');
+      
+      if (response.statusCode == 201) {
+        print('✅ Файл успешно загружен');
+        final fileData = json.decode(responseData);
+        print('ID загруженного файла: ${fileData['id']}');
+        print('URL файла: ${fileData['source_url']}');
+        return fileData;
+      } else {
+        print('❌ Ошибка загрузки файла: ${response.statusCode}');
+        print('Тело ответа: $responseData');
+        return null;
+      }
+    } catch (e) {
+      print('❌ Исключение при загрузке файла: $e');
+      return null;
+    }
+  }
+
+  Future<bool> deleteFile(int fileId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/wp-json/wp/v2/media/$fileId?force=true'),
+        headers: {
+          'Authorization': 'Bearer $jwtToken',
+        },
+      );
+
+      print('Статус удаления файла: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        print('✅ Файл успешно удален');
+        return true;
+      } else {
+        print('❌ Ошибка удаления файла: ${response.statusCode}');
+        print('Тело ответа: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Исключение при удалении файла: $e');
+      return false;
     }
   }
 
