@@ -74,11 +74,31 @@ GET http://gazonbaza.ru/wp-json/wp/v2/users/1
 
 
 
-222
+
 
 flutter clean
 flutter pub get
 flutter build apk --release
+
+flutter clean
+flutter pub get
+cd android
+./gradlew clean
+cd ..
+flutter run
+
+# Быстрое сохранение (1 команда!)
+git quick-save
+
+# Или с сообщением
+git save "Мое описание изменений"
+
+# Создать новую ветку
+git feature new-functionality
+
+
+
+###
 
 
 ###
