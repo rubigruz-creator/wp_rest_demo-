@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 import 'services/wp_api.dart';
+import 'screens/image_viewer_screen.dart';
 
 void main() {
   runApp(MyApp());

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../services/wp_api.dart';
+import 'image_viewer_screen.dart';
+import '../widgets/editable_image.dart';
 
 class VeschiScreen extends StatefulWidget {
   final WPApi api;
@@ -80,59 +82,31 @@ class _VeschiScreenState extends State<VeschiScreen> {
       if (!_veschNameControllers.containsKey(id)) {
         final veschName = _getAcfValue(item, 'vesch-name').toString();
         _veschNameControllers[id] = TextEditingController(text: veschName);
-        print('Инициализация контроллера для $id: vesch-name = "$veschName"');
       }
       
       if (!_nicknameControllers.containsKey(id)) {
         final nickname = _getAcfValue(item, 'nickname').toString();
         _nicknameControllers[id] = TextEditingController(text: nickname);
-        print('Инициализация контроллера для $id: nickname = "$nickname"');
       }
       
       final veschFoto = _getAcfValue(item, 'vesch-foto');
       final userPhoto = _getAcfValue(item, 'photo');
       
-      print('=== ИНИЦИАЛИЗАЦИЯ ИЗОБРАЖЕНИЙ ДЛЯ $id ===');
-      print('vesch-foto raw: $veschFoto (type: ${veschFoto.runtimeType})');
-      print('photo raw: $userPhoto (type: ${userPhoto.runtimeType})');
-      
-      // ОБРАБОТКА VESCH-FOTO
-      if (veschFoto != null && veschFoto != '' && veschFoto != 'false') {
+      if (veschFoto != null && veschFoto != '') {
         if (veschFoto is Map && veschFoto['id'] != null) {
           _veschFotoIds[id] = veschFoto['id'] as int;
-          print('Установлен vesch-foto из Map: ${veschFoto['id']}');
         } else if (veschFoto is int) {
           _veschFotoIds[id] = veschFoto;
-          print('Установлен vesch-foto из int: $veschFoto');
-        } else if (veschFoto is String && veschFoto.isNotEmpty) {
-          try {
-            _veschFotoIds[id] = int.parse(veschFoto);
-            print('Установлен vesch-foto из String: $veschFoto -> ${int.parse(veschFoto)}');
-          } catch (e) {
-            print('Ошибка преобразования vesch-foto String в int: $veschFoto');
-          }
         }
       }
       
-      // ОБРАБОТКА USER PHOTO
-      if (userPhoto != null && userPhoto != '' && userPhoto != 'false') {
+      if (userPhoto != null && userPhoto != '') {
         if (userPhoto is Map && userPhoto['id'] != null) {
           _userPhotoIds[id] = userPhoto['id'] as int;
-          print('Установлен photo из Map: ${userPhoto['id']}');
         } else if (userPhoto is int) {
           _userPhotoIds[id] = userPhoto;
-          print('Установлен photo из int: $userPhoto');
-        } else if (userPhoto is String && userPhoto.isNotEmpty) {
-          try {
-            _userPhotoIds[id] = int.parse(userPhoto);
-            print('Установлен photo из String: $userPhoto -> ${int.parse(userPhoto)}');
-          } catch (e) {
-            print('Ошибка преобразования photo String в int: $userPhoto');
-          }
         }
       }
-      
-      print('Итог для $id: veschFotoId = ${_veschFotoIds[id]}, userPhotoId = ${_userPhotoIds[id]}');
     }
   }
 
@@ -231,6 +205,8 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
   }
 
+  // НОВЫЕ МЕТОДЫ ДЛЯ РАБОТЫ С ИЗОБРАЖЕНИЯМИ
+
   Future<void> _showImageSourceDialog(int itemId, String fieldType) async {
     await showDialog(
       context: context,
@@ -282,25 +258,15 @@ class _VeschiScreenState extends State<VeschiScreen> {
         final File imageFile = File(pickedFile.path);
         final fileName = '${fieldType}_${itemId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
         
-        print('=== ЗАГРУЗКА ИЗОБРАЖЕНИЯ ===');
-        print('Field Type: $fieldType');
-        print('Item ID: $itemId');
-        print('File: ${imageFile.path}');
-        
         final uploadedImage = await widget.api.uploadImage(imageFile, fileName);
 
         if (uploadedImage != null) {
           final imageId = uploadedImage['id'] as int;
           
-          print('=== ИЗОБРАЖЕНИЕ ЗАГРУЖЕНО УСПЕШНО ===');
-          print('Image ID: $imageId (type: ${imageId.runtimeType})');
-          
           if (fieldType == 'vesch-foto') {
             _veschFotoIds[itemId] = imageId;
-            print('Установлено vesch-foto для $itemId: $imageId');
           } else {
             _userPhotoIds[itemId] = imageId;
-            print('Установлено photo для $itemId: $imageId');
           }
           
           await _saveChanges(itemId, shouldRefresh: true);
@@ -313,9 +279,86 @@ class _VeschiScreenState extends State<VeschiScreen> {
         _showMessage('Отменено');
       }
     } catch (e) {
-      print('Ошибка в _pickAndUploadImage: $e');
       _showMessage('Ошибка: $e', isError: true);
     }
+  }
+
+  void _showFullScreenImage(int itemId, String fieldType, String imageUrl) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ImageViewerScreen(
+          imageUrl: imageUrl,
+          onEdit: () {
+            Navigator.pop(context);
+            _showImageSourceDialog(itemId, fieldType);
+          },
+          onDelete: () {
+            Navigator.pop(context);
+            _deleteImage(itemId, fieldType);
+          },
+          onClose: () {
+            Navigator.pop(context);
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteImage(int itemId, String fieldType) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A3A),
+        title: Text(
+          'Удалить ${fieldType == 'vesch-foto' ? 'фото вещи' : 'фото юзера'}?',
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Вы уверены, что хотите удалить ${fieldType == 'vesch-foto' ? 'фото вещи' : 'фото юзера'}?',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Отмена', style: TextStyle(color: Colors.orange)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true) {
+      _showLoadingMessage('Удаление изображения...');
+
+      try {
+        if (fieldType == 'vesch-foto') {
+          _veschFotoIds.remove(itemId);
+        } else {
+          _userPhotoIds.remove(itemId);
+        }
+
+        await _saveChanges(itemId, shouldRefresh: true);
+        _showMessage('${fieldType == 'vesch-foto' ? 'Фото вещи' : 'Фото юзера'} удалено!');
+      } catch (e) {
+        _showMessage('Ошибка удаления: $e', isError: true);
+      }
+    }
+  }
+
+  void _onImageTap(int itemId, String fieldType, String imageUrl, bool hasImage) {
+    if (hasImage) {
+      _showFullScreenImage(itemId, fieldType, imageUrl);
+    } else {
+      _showImageSourceDialog(itemId, fieldType);
+    }
+  }
+
+  void _onImageEdit(int itemId, String fieldType) {
+    _showImageSourceDialog(itemId, fieldType);
   }
 
   Future<void> _saveChanges(int itemId, {bool showMessage = true, bool shouldRefresh = false}) async {
@@ -327,32 +370,22 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
 
     try {
-      // ИСПРАВЛЕННЫЙ ФОРМАТ ДЛЯ ACF
       final Map<String, dynamic> updateData = {
         'acf': {
-          'vesch-name': veschName, // ТОЧНОЕ название поля ACF
-          'nickname': nickname,    // ТОЧНОЕ название поля ACF
+          'vesch-name': veschName,
+          'nickname': nickname,
         }
       };
 
-      // ИСПРАВЛЕНИЕ ДЛЯ ИЗОБРАЖЕНИЙ: преобразуем int в String
       if (_veschFotoIds.containsKey(itemId) && _veschFotoIds[itemId] != null) {
         final imageId = _veschFotoIds[itemId]!;
-        updateData['acf']!['vesch-foto'] = imageId.toString(); // ПРЕОБРАЗУЕМ В СТРОКУ
+        updateData['acf']!['vesch-foto'] = imageId.toString();
       }
       
       if (_userPhotoIds.containsKey(itemId) && _userPhotoIds[itemId] != null) {
         final imageId = _userPhotoIds[itemId]!;
-        updateData['acf']!['photo'] = imageId.toString(); // ПРЕОБРАЗУЕМ В СТРОКУ
+        updateData['acf']!['photo'] = imageId.toString();
       }
-
-      print('=== ОТПРАВКА ДАННЫХ ИЗ ПРИЛОЖЕНИЯ ===');
-      print('Item ID: $itemId');
-      print('Vesch Name: "$veschName"');
-      print('Nickname: "$nickname"');
-      print('Vesch Foto ID: ${_veschFotoIds[itemId]} -> ${_veschFotoIds[itemId]?.toString()}');
-      print('User Photo ID: ${_userPhotoIds[itemId]} -> ${_userPhotoIds[itemId]?.toString()}');
-      print('Полные данные: $updateData');
 
       final success = await widget.api.updateVeschi(itemId, updateData);
       
@@ -382,13 +415,12 @@ class _VeschiScreenState extends State<VeschiScreen> {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final defaultTitle = "Вещь $timestamp";
 
-      // ИСПРАВЛЕННЫЕ НАЗВАНИЯ ПОЛЕЙ ACF
       final newVeschData = {
         'title': defaultTitle,
         'status': 'publish',
         'acf': {
-          'vesch-name': defaultTitle, // ТОЧНОЕ название ACF
-          'nickname': '',             // ТОЧНОЕ название ACF
+          'vesch-name': defaultTitle,
+          'nickname': '',
         }
       };
 
@@ -587,24 +619,22 @@ class _VeschiScreenState extends State<VeschiScreen> {
                       final veschFotoUrl = _getImageUrl(_getAcfValue(item, 'vesch-foto'));
                       final userPhotoUrl = _getImageUrl(_getAcfValue(item, 'photo'));
                       
+                      final hasVeschFoto = veschFotoUrl.isNotEmpty;
+                      final hasUserPhoto = userPhotoUrl.isNotEmpty;
+
                       return DataRow(
                         cells: [
                           DataCell(
                             Text(id.toString(), style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
                           ),
                           DataCell(
-                            GestureDetector(
-                              onTap: () => _showImageSourceDialog(id, 'vesch-foto'),
-                              child: CircleAvatar(
-                                radius: 28,
-                                backgroundColor: Colors.grey[800],
-                                backgroundImage: veschFotoUrl.isNotEmpty 
-                                    ? NetworkImage(veschFotoUrl) 
-                                    : null,
-                                child: veschFotoUrl.isEmpty 
-                                    ? const Icon(Icons.add_a_photo, size: 20, color: Colors.orange)
-                                    : null,
-                              ),
+                            EditableImage(
+                              imageUrl: veschFotoUrl,
+                              hasImage: hasVeschFoto,
+                              onTap: () => _onImageTap(id, 'vesch-foto', veschFotoUrl, hasVeschFoto),
+                              onEdit: () => _onImageEdit(id, 'vesch-foto'),
+                              size: 56,
+                              borderRadius: 20,
                             ),
                           ),
                           DataCell(
@@ -626,18 +656,13 @@ class _VeschiScreenState extends State<VeschiScreen> {
                             ),
                           ),
                           DataCell(
-                            GestureDetector(
-                              onTap: () => _showImageSourceDialog(id, 'photo'),
-                              child: CircleAvatar(
-                                radius: 28,
-                                backgroundColor: Colors.grey[800],
-                                backgroundImage: userPhotoUrl.isNotEmpty 
-                                    ? NetworkImage(userPhotoUrl) 
-                                    : null,
-                                child: userPhotoUrl.isEmpty 
-                                    ? const Icon(Icons.add_a_photo, size: 20, color: Colors.orange)
-                                    : null,
-                              ),
+                            EditableImage(
+                              imageUrl: userPhotoUrl,
+                              hasImage: hasUserPhoto,
+                              onTap: () => _onImageTap(id, 'photo', userPhotoUrl, hasUserPhoto),
+                              onEdit: () => _onImageEdit(id, 'photo'),
+                              size: 56,
+                              borderRadius: 20,
                             ),
                           ),
                           DataCell(
@@ -755,45 +780,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class TimerWidget extends StatefulWidget {
-  final String dateIso;
-  final String Function(String) formatTimer;
-
-  const TimerWidget({
-    super.key,
-    required this.dateIso,
-    required this.formatTimer,
-  });
-
-  @override
-  State<TimerWidget> createState() => _TimerWidgetState();
-}
-
-class _TimerWidgetState extends State<TimerWidget> {
-  @override
-  void initState() {
-    super.initState();
-    _startTimer();
-  }
-
-  void _startTimer() {
-    Future.delayed(const Duration(minutes: 1), () {
-      if (mounted) {
-        setState(() {});
-        _startTimer();
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      widget.formatTimer(widget.dateIso),
-      style: const TextStyle(fontFamily: 'monospace', fontSize: 10, color: Colors.yellow),
     );
   }
 }
