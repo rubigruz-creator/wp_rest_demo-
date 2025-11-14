@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-//import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import '../services/wp_api.dart';
@@ -9,7 +9,6 @@ import 'image_viewer_screen.dart';
 import '../widgets/editable_image.dart';
 import '../widgets/file_upload_widget.dart';
 import '../widgets/file_management_dialog.dart';
-import 'package:flutter/services.dart'; // ДЛЯ Clipboard
 
 class VeschiScreen extends StatefulWidget {
   final WPApi api;
@@ -27,8 +26,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
   final Map<int, TextEditingController> _nicknameControllers = {};
   final Map<int, int> _veschFotoIds = {};
   final Map<int, int> _userPhotoIds = {};
-  
-  // НОВЫЕ ПОЛЯ ДЛЯ ФАЙЛОВ
   final Map<int, int> _custFileIds = {};
   final Map<int, String> _custFileUrls = {};
   final Map<int, String> _custFileNames = {};
@@ -101,6 +98,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
       
       final veschFoto = _getAcfValue(item, 'vesch-foto');
       final userPhoto = _getAcfValue(item, 'photo');
+      final custFile = _getAcfValue(item, 'cust-files');
       
       if (veschFoto != null && veschFoto != '') {
         if (veschFoto is Map && veschFoto['id'] != null) {
@@ -118,8 +116,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
         }
       }
       
-      // НОВОЕ: Инициализация файлов
-      final custFile = _getAcfValue(item, 'cust-files');
       if (custFile != null && custFile != '' && custFile != 'false') {
         if (custFile is Map) {
           if (custFile['id'] != null) {
@@ -233,9 +229,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
   }
 
-
-  // ДОБАВЬТЕ ЭТОТ МЕТОД ЗДЕСЬ ↓
-  // НОВЫЙ МЕТОД: Получить тип файла для лучшего отображения
   String _getFileType(String fileName) {
     final extension = fileName.toLowerCase().split('.').last;
     
@@ -262,13 +255,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
         return 'Файл';
     }
   }
-
-  // Дальше идут остальные методы...
-
-
-
-
-  // МЕТОДЫ ДЛЯ РАБОТЫ С ИЗОБРАЖЕНИЯМИ
 
   Future<void> _showImageSourceDialog(int itemId, String fieldType) async {
     await showDialog(
@@ -424,8 +410,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
     _showImageSourceDialog(itemId, fieldType);
   }
 
-  // НОВЫЕ МЕТОДЫ ДЛЯ РАБОТЫ С ФАЙЛАМИ
-
   void _showFileManagementDialog(int itemId) {
     final hasFile = _custFileIds.containsKey(itemId) && _custFileIds[itemId] != null;
     final fileUrl = _custFileUrls[itemId];
@@ -438,7 +422,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
         fileName: fileName,
         fileUrl: fileUrl,
         hasFile: hasFile,
-        fileType: fileType, // ДОБАВЛЯЕМ ТИП ФАЙЛА
+        fileType: fileType,
         onUpload: () {
           Navigator.pop(context);
           _showFileSourceDialog(itemId);
@@ -456,10 +440,6 @@ class _VeschiScreenState extends State<VeschiScreen> {
     );
   }
 
-
-
-
-
   void _showFileSourceDialog(int itemId) {
     showDialog(
       context: context,
@@ -473,11 +453,19 @@ class _VeschiScreenState extends State<VeschiScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.folder_open, color: Colors.orange),
-              title: const Text('Файлы устройства', style: TextStyle(color: Colors.white)),
+              leading: const Icon(Icons.photo_library, color: Colors.blue),
+              title: const Text('Галерея изображений', style: TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(context);
-                _pickAndUploadFile(itemId);
+                _pickImageFromGallery(itemId);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Colors.green),
+              title: const Text('Сделать фото', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImageFromCamera(itemId);
               },
             ),
           ],
@@ -486,181 +474,188 @@ class _VeschiScreenState extends State<VeschiScreen> {
     );
   }
 
-
-  Future<void> _pickAndUploadFile(int itemId) async {
+  Future<void> _pickImageFromGallery(int itemId) async {
     try {
-      // Временное решение - используем выбор изображения как файла
-      _showLoadingMessage('Выбор файла...');
-
-      final XFile? pickedFile = await _imagePicker.pickImage(
+      _showLoadingMessage('Открытие галереи...');
+      final XFile? imageFile = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         requestFullMetadata: false,
       );
-
-      if (pickedFile != null) {
-        final File file = File(pickedFile.path);
-        final fileName = 'cust_file_${itemId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        
-        _showLoadingMessage('Загрузка файла...');
-
-        final uploadedFile = await widget.api.uploadFile(file, fileName);
-
-        if (uploadedFile != null) {
-          final fileId = uploadedFile['id'] as int;
-          final fileUrl = uploadedFile['source_url'] as String;
-          final fileName = uploadedFile['title']?['rendered'] as String? ?? 'file';
-          
-          _custFileIds[itemId] = fileId;
-          _custFileUrls[itemId] = fileUrl;
-          _custFileNames[itemId] = fileName;
-          
-          await _saveChanges(itemId, shouldRefresh: true);
-          
-          _showMessage('Файл успешно загружен!');
-        } else {
-          _showMessage('Ошибка загрузки файла', isError: true);
-        }
+      
+      if (imageFile != null) {
+        await _uploadSelectedFile(itemId, File(imageFile.path), 'image.jpg');
       } else {
-        _showMessage('Выбор файла отменен');
+        _showMessage('Выбор отменен');
       }
     } catch (e) {
       _showMessage('Ошибка: $e', isError: true);
     }
   }
 
-
-Future<void> _downloadFile(int itemId) async {
-  if (!_custFileUrls.containsKey(itemId)) {
-    _showMessage('Файл не найден', isError: true);
-    return;
-  }
-
-  final fileUrl = _custFileUrls[itemId]!;
-  final fileName = _custFileNames[itemId] ?? 'download';
-
-  try {
-    _showLoadingMessage('Открытие файла...');
-
-    print('=== СКАЧИВАНИЕ ФАЙЛА ===');
-    print('URL: $fileUrl');
-    print('Имя файла: $fileName');
-
-    // Проверяем, можно ли открыть URL
-    if (await canLaunchUrl(Uri.parse(fileUrl))) {
-      // Пытаемся открыть в браузере/внешнем приложении
-      final launched = await launchUrl(
-        Uri.parse(fileUrl),
-        mode: LaunchMode.externalApplication, // Важно: открываем во внешнем приложении
+  Future<void> _pickImageFromCamera(int itemId) async {
+    try {
+      _showLoadingMessage('Открытие камеры...');
+      final XFile? imageFile = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        requestFullMetadata: false,
       );
       
-      if (launched) {
-        _showMessage('Файл открывается...');
+      if (imageFile != null) {
+        await _uploadSelectedFile(itemId, File(imageFile.path), 'photo.jpg');
       } else {
-        _showMessage('Не удалось открыть файл. Попробуйте вручную.', isError: true);
+        _showMessage('Съемка отменена');
       }
-    } else {
-      // Если не получается открыть напрямую, показываем диалог с копированием ссылки
+    } catch (e) {
+      _showMessage('Ошибка: $e', isError: true);
+    }
+  }
+
+  Future<void> _uploadSelectedFile(int itemId, File file, String originalName) async {
+    try {
+      _showLoadingMessage('Загрузка файла...');
+
+      final extension = originalName.split('.').last;
+      final fileName = 'cust_file_${itemId}_${DateTime.now().millisecondsSinceEpoch}.$extension';
+
+      final uploadedFile = await widget.api.uploadFile(file, fileName);
+
+      if (uploadedFile != null) {
+        final fileId = uploadedFile['id'] as int;
+        final fileUrl = uploadedFile['source_url'] as String;
+        final serverFileName = uploadedFile['title']?['rendered'] as String? ?? originalName;
+        
+        setState(() {
+          _custFileIds[itemId] = fileId;
+          _custFileUrls[itemId] = fileUrl;
+          _custFileNames[itemId] = serverFileName;
+        });
+        
+        await _saveChanges(itemId, shouldRefresh: true);
+        _showMessage('Файл успешно загружен!');
+      } else {
+        _showMessage('Ошибка загрузки файла на сервер', isError: true);
+      }
+    } catch (e) {
+      print('Ошибка загрузки файла: $e');
+      _showMessage('Ошибка загрузки: $e', isError: true);
+    }
+  }
+
+  Future<void> _downloadFile(int itemId) async {
+    if (!_custFileUrls.containsKey(itemId)) {
+      _showMessage('Файл не найден', isError: true);
+      return;
+    }
+
+    final fileUrl = _custFileUrls[itemId]!;
+    final fileName = _custFileNames[itemId] ?? 'download';
+
+    try {
+      _showLoadingMessage('Открытие файла...');
+
+      if (await canLaunchUrl(Uri.parse(fileUrl))) {
+        final launched = await launchUrl(
+          Uri.parse(fileUrl),
+          mode: LaunchMode.externalApplication,
+        );
+        
+        if (launched) {
+          _showMessage('Файл открывается...');
+        } else {
+          _showDownloadOptions(fileUrl, fileName, itemId);
+        }
+      } else {
+        _showDownloadOptions(fileUrl, fileName, itemId);
+      }
+    } catch (e) {
       _showDownloadOptions(fileUrl, fileName, itemId);
     }
-  } catch (e) {
-    print('Ошибка при открытии файла: $e');
-    _showDownloadOptions(fileUrl, fileName, itemId);
   }
-}
 
-// НОВЫЙ МЕТОД: Показать опции скачивания
-void _showDownloadOptions(String fileUrl, String fileName, int itemId) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: const Color(0xFF1A1A3A),
-      title: const Text(
-        'Скачать файл',
-        style: TextStyle(color: Colors.white),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Файл: $fileName',
-            style: const TextStyle(color: Colors.white70),
+  void _showDownloadOptions(String fileUrl, String fileName, int itemId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A3A),
+        title: const Text(
+          'Скачать файл',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Файл: $fileName',
+              style: const TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Выберите способ скачивания:',
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _copyDownloadLink(fileUrl);
+            },
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.link, color: Colors.orange, size: 18),
+                SizedBox(width: 8),
+                Text('Копировать ссылку', style: TextStyle(color: Colors.orange)),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Выберите способ скачивания:',
-            style: TextStyle(color: Colors.white),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _openInBrowser(fileUrl);
+            },
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.open_in_browser, color: Colors.blue, size: 18),
+                SizedBox(width: 8),
+                Text('Открыть в браузере', style: TextStyle(color: Colors.blue)),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена', style: TextStyle(color: Colors.grey)),
           ),
         ],
       ),
-      actions: [
-        // Кнопка копирования ссылки
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-            _copyDownloadLink(fileUrl);
-          },
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.link, color: Colors.orange, size: 18),
-              SizedBox(width: 8),
-              Text('Копировать ссылку', style: TextStyle(color: Colors.orange)),
-            ],
-          ),
-        ),
-        // Кнопка открытия в браузере
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-            _openInBrowser(fileUrl);
-          },
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.open_in_browser, color: Colors.blue, size: 18),
-              SizedBox(width: 8),
-              Text('Открыть в браузере', style: TextStyle(color: Colors.blue)),
-            ],
-          ),
-        ),
-        // Кнопка отмены
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена', style: TextStyle(color: Colors.grey)),
-        ),
-      ],
-    ),
-  );
-}
-
-// НОВЫЙ МЕТОД: Копировать ссылку в буфер обмена
-Future<void> _copyDownloadLink(String fileUrl) async {
-  try {
-    await Clipboard.setData(ClipboardData(text: fileUrl));
-    _showMessage('Ссылка скопирована в буфер обмена!');
-  } catch (e) {
-    _showMessage('Ошибка копирования: $e', isError: true);
-  }
-}
-
-// НОВЫЙ МЕТОД: Открыть в браузере
-Future<void> _openInBrowser(String fileUrl) async {
-  try {
-    final launched = await launchUrl(
-      Uri.parse(fileUrl),
-      mode: LaunchMode.externalApplication,
     );
-    
-    if (!launched) {
-      _showMessage('Не удалось открыть браузер', isError: true);
-    }
-  } catch (e) {
-    _showMessage('Ошибка: $e', isError: true);
   }
-}
 
+  Future<void> _copyDownloadLink(String fileUrl) async {
+    try {
+      await Clipboard.setData(ClipboardData(text: fileUrl));
+      _showMessage('Ссылка скопирована в буфер обмена!');
+    } catch (e) {
+      _showMessage('Ошибка копирования: $e', isError: true);
+    }
+  }
 
-
+  Future<void> _openInBrowser(String fileUrl) async {
+    try {
+      final launched = await launchUrl(
+        Uri.parse(fileUrl),
+        mode: LaunchMode.externalApplication,
+      );
+      
+      if (!launched) {
+        _showMessage('Не удалось открыть браузер', isError: true);
+      }
+    } catch (e) {
+      _showMessage('Ошибка: $e', isError: true);
+    }
+  }
 
   Future<void> _deleteFile(int itemId) async {
     if (!_custFileIds.containsKey(itemId)) {
@@ -739,7 +734,6 @@ Future<void> _openInBrowser(String fileUrl) async {
         updateData['acf']!['photo'] = imageId.toString();
       }
 
-      // НОВОЕ: Добавляем файл
       if (_custFileIds.containsKey(itemId) && _custFileIds[itemId] != null) {
         final fileId = _custFileIds[itemId]!;
         updateData['acf']!['cust-files'] = fileId.toString();
@@ -967,7 +961,7 @@ Future<void> _openInBrowser(String fileUrl) async {
                       DataColumn(label: Text('Название\nВещи')),
                       DataColumn(label: Text('Фото\nЮзера')),
                       DataColumn(label: Text('Прозвище')),
-                      DataColumn(label: Text('Файл')), // НОВАЯ КОЛОНКА
+                      DataColumn(label: Text('Файл')),
                       DataColumn(label: Text('Время - Деньги')),
                       DataColumn(label: Text('Действия')),
                     ],
@@ -1041,7 +1035,6 @@ Future<void> _openInBrowser(String fileUrl) async {
                               ),
                             ),
                           ),
-                          // НОВАЯ ЯЧЕЙКА ДЛЯ ФАЙЛА
                           DataCell(
                             FileUploadWidget(
                               fileUrl: _custFileUrls[id],

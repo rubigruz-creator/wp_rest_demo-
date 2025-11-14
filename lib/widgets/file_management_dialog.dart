@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-
-
 class FileManagementDialog extends StatelessWidget {
   final String? fileName;
   final String? fileUrl;
   final bool hasFile;
-  final String? fileType; // ДОБАВЛЯЕМ ТИП ФАЙЛА
+  final String? fileType;
   final VoidCallback onUpload;
   final VoidCallback onDownload;
   final VoidCallback onDelete;
@@ -17,7 +15,7 @@ class FileManagementDialog extends StatelessWidget {
     this.fileName,
     this.fileUrl,
     required this.hasFile,
-    this.fileType, // ДОБАВЛЯЕМ В КОНСТРУКТОР
+    this.fileType,
     required this.onUpload,
     required this.onDownload,
     required this.onDelete,
@@ -36,7 +34,6 @@ class FileManagementDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Заголовок
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -58,7 +55,6 @@ class FileManagementDialog extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // Информация о файле
             if (hasFile && fileName != null)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -69,14 +65,17 @@ class FileManagementDialog extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.insert_drive_file, color: Colors.green),
+                    Icon(
+                      _getFileIcon(fileName!),
+                      color: Colors.green,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Файл: $fileName',
+                            fileName!,
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -84,9 +83,9 @@ class FileManagementDialog extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          if (fileUrl != null)
+                          if (fileType != null)
                             Text(
-                              'Размер: ${_getFileSizeFromUrl(fileUrl!)}',
+                              'Тип: $fileType',
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
@@ -120,10 +119,8 @@ class FileManagementDialog extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Кнопки действий
             Column(
               children: [
-                // Кнопка загрузки
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -140,7 +137,6 @@ class FileManagementDialog extends StatelessWidget {
 
                 const SizedBox(height: 8),
 
-                // Кнопка скачивания (только если есть файл)
                 if (hasFile && fileUrl != null)
                   SizedBox(
                     width: double.infinity,
@@ -158,7 +154,6 @@ class FileManagementDialog extends StatelessWidget {
 
                 if (hasFile && fileUrl != null) const SizedBox(height: 8),
 
-                // Кнопка удаления (только если есть файл)
                 if (hasFile)
                   SizedBox(
                     width: double.infinity,
@@ -181,8 +176,30 @@ class FileManagementDialog extends StatelessWidget {
     );
   }
 
-  String _getFileSizeFromUrl(String url) {
-    // Это заглушка - в реальном приложении нужно получать размер файла с сервера
-    return '~1.5 MB';
+  IconData _getFileIcon(String fileName) {
+    final extension = fileName.toLowerCase().split('.').last;
+    
+    switch (extension) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'doc':
+      case 'docx':
+        return Icons.article;
+      case 'xls':
+      case 'xlsx':
+        return Icons.table_chart;
+      case 'zip':
+      case 'rar':
+        return Icons.archive;
+      case 'txt':
+        return Icons.text_fields;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return Icons.image;
+      default:
+        return Icons.insert_drive_file;
+    }
   }
 }

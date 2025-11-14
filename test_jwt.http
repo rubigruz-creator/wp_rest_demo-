@@ -69,6 +69,19 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ
 
 ###
 
+###
+
+
+
+GET http://gazonbaza.ru/wp-json/wp/v2/users/me
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F6b25iYXphLnJ1IiwiaWF0IjoxNzYyOTUwODQyLCJuYmYiOjE3NjI5NTA4NDIsImV4cCI6MTc2MzU1NTY0MiwiZGF0YSI6eyJ1c2VyIjp7ImlkIjoiMSJ9fX0.lbN1wkMpvv9Y7PMdSHPjbob-yNQ2gh6uIKQdo9B6rTM
+
+###
+
+
+
+
+
 GET http://gazonbaza.ru/wp-json/wp/v2/users/1
 
 

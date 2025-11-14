@@ -7,7 +7,7 @@ class WPApi {
 
   WPApi(this.baseUrl);
 
-  final String jwtToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F6b25iYXphLnJ1IiwiaWF0IjoxNzYyMzI4MjI2LCJuYmYiOjE3NjIzMjgyMjYsImV4cCI6MTc2MjkzMzAyNiwiZGF0YSI6eyJ1c2VyIjp7ImlkIjoiMSJ9fX0.Fpb6nwBI96apfZvXDW_ep8h30eqp0IDDSUGZuWJKavk';
+  final String jwtToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F6b25iYXphLnJ1IiwiaWF0IjoxNzYyOTUwODQyLCJuYmYiOjE3NjI5NTA4NDIsImV4cCI6MTc2MzU1NTY0MiwiZGF0YSI6eyJ1c2VyIjp7ImlkIjoiMSJ9fX0.lbN1wkMpvv9Y7PMdSHPjbob-yNQ2gh6uIKQdo9B6rTM';
 
   Future<List<dynamic>> fetchVeschi() async {
     try {
@@ -38,20 +38,9 @@ class WPApi {
       print('ID: $id');
       print('Полные данные: ${json.encode(data)}');
       
-      // Детальный разбор ACF данных
-      if (data['acf'] != null) {
-        print('=== ДЕТАЛИ ACF ПОЛЕЙ ===');
-        data['acf'].forEach((key, value) {
-          print('$key: $value (type: ${value.runtimeType})');
-        });
-      }
-      
-      // Для ACF полей используем fields параметр
       final Map<String, dynamic> postData = {
-        'fields': data['acf'] // ACF ожидает поля в разделе 'fields'
+        'fields': data['acf']
       };
-      
-      print('Данные для отправки (fields): ${json.encode(postData)}');
       
       final response = await http.post(
         Uri.parse('$baseUrl/wp-json/wp/v2/veschi/$id'),
@@ -63,34 +52,13 @@ class WPApi {
       );
 
       print('Статус ответа: ${response.statusCode}');
-      print('Тело ответа: ${response.body}');
-
+      
       if (response.statusCode == 200) {
         print('✅ УСПЕШНО сохранено на сервере');
-        
-        // Парсим ответ для проверки
-        try {
-          final responseData = json.decode(response.body);
-          final acfFields = responseData['acf'] ?? {};
-          print('=== ПРОВЕРКА СОХРАНЕННЫХ ДАННЫХ ===');
-          print('vesch-name: ${acfFields['vesch-name']}');
-          print('nickname: ${acfFields['nickname']}');
-          print('vesch-foto: ${acfFields['vesch-foto']}');
-          print('photo: ${acfFields['photo']}');
-          print('cust-files: ${acfFields['cust-files']}');
-        } catch (e) {
-          print('Не удалось распарсить ответ для проверки: $e');
-        }
-        
         return true;
       } else {
         print('❌ ОШИБКА сервера: ${response.statusCode}');
-        try {
-          final errorData = json.decode(response.body);
-          print('Детали ошибки: $errorData');
-        } catch (e) {
-          print('Не удалось распарсить ошибку');
-        }
+        print('Тело ответа: ${response.body}');
         return false;
       }
     } catch (e) {
@@ -128,7 +96,6 @@ class WPApi {
     try {
       print('=== Начало загрузки изображения ===');
       print('Файл: ${imageFile.path}');
-      print('Имя файла: $fileName');
       
       var request = http.MultipartRequest(
         'POST',
@@ -166,12 +133,11 @@ class WPApi {
     }
   }
 
-  // НОВЫЙ МЕТОД ДЛЯ ЗАГРУЗКИ ФАЙЛОВ (ИСПРАВЛЕННЫЙ)
   Future<Map<String, dynamic>?> uploadFile(File file, String fileName) async {
     try {
       print('=== Начало загрузки файла ===');
       print('Файл: ${file.path}');
-      print('Имя файла: $fileName');
+      print('Размер файла: ${file.lengthSync()} байт');
       
       var request = http.MultipartRequest(
         'POST',
@@ -180,7 +146,7 @@ class WPApi {
       
       request.headers['Authorization'] = 'Bearer $jwtToken';
       
-      // ПРОСТАЯ ЗАГРУЗКА БЕЗ MIME-TYPE
+      // Добавляем файл с правильным именем
       request.files.add(
         await http.MultipartFile.fromPath(
           'file',
@@ -193,6 +159,7 @@ class WPApi {
       var responseData = await response.stream.bytesToString();
 
       print('Статус загрузки файла: ${response.statusCode}');
+      print('Ответ сервера: $responseData');
       
       if (response.statusCode == 201) {
         print('✅ Файл успешно загружен');
@@ -202,7 +169,6 @@ class WPApi {
         return fileData;
       } else {
         print('❌ Ошибка загрузки файла: ${response.statusCode}');
-        print('Тело ответа: $responseData');
         return null;
       }
     } catch (e) {
@@ -227,7 +193,6 @@ class WPApi {
         return true;
       } else {
         print('❌ Ошибка удаления файла: ${response.statusCode}');
-        print('Тело ответа: ${response.body}');
         return false;
       }
     } catch (e) {
@@ -238,9 +203,6 @@ class WPApi {
 
   Future<Map<String, dynamic>?> createVeschi(Map<String, dynamic> data) async {
     try {
-      print('=== Создание новой вещи ===');
-      print('Данные: ${json.encode(data)}');
-      
       final response = await http.post(
         Uri.parse('$baseUrl/wp-json/wp/v2/veschi'),
         headers: {
@@ -257,7 +219,6 @@ class WPApi {
         return json.decode(response.body);
       } else {
         print('❌ Ошибка создания: ${response.statusCode}');
-        print('Тело ответа: ${response.body}');
         return null;
       }
     } catch (e) {

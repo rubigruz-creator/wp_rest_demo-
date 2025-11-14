@@ -1,6 +1,5 @@
 name: wp_rest_demo
-description: "WP REST API Demo Application"
-
+description: "БАЗАР-ВОКЗАЛ - Управление вещами"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -13,7 +12,6 @@ dependencies:
     sdk: flutter
   http: ^1.2.0
   image_picker: ^1.0.4
-  # file_picker: ^5.5.0  # ВРЕМЕННО КОММЕНТИРУЕМ
   url_launcher: ^6.1.11
   cupertino_icons: ^1.0.8
 
@@ -24,3 +22,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/  # ДОБАВЬТЕ ЭТУ СТРОКУ

@@ -25,7 +25,7 @@ class SplashScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Место для твоей картинки
+              // КАРТИНКА ЛОГОТИПА
               Container(
                 width: 200,
                 height: 200,
@@ -40,10 +40,22 @@ class SplashScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.flag,
-                  size: 100,
-                  color: Colors.orange,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(17), // Немного меньше чем контейнер
+                  child: Image.asset(
+                    'assets/images/logo.png', // ПУТЬ К ВАШЕЙ КАРТИНКЕ
+                    fit: BoxFit.cover, // Заполняет весь контейнер
+                    width: 200,
+                    height: 200,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Если картинка не загрузится, покажем иконку
+                      return const Icon(
+                        Icons.flag,
+                        size: 100,
+                        color: Colors.orange,
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 40),
