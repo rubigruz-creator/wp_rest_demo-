@@ -104,7 +104,7 @@ flutter run
 git quick-save
 
 # Или с сообщением
-git save "Мое описание изменений"
+git save "VseOK_krome_filepicker"
 
 # Создать новую ветку
 git feature new-functionality

@@ -945,7 +945,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
                           backgroundColor: Colors.orange,
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                         ),
                       ),
@@ -1226,7 +1226,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
                 gradient: const LinearGradient(
                   colors: [Colors.green, Colors.lightGreen],
                 ),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(4),
               ),
               child: IconButton(
                 icon: const Icon(Icons.save, color: Colors.white, size: 18),
@@ -1240,7 +1240,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
                 gradient: const LinearGradient(
                   colors: [Colors.red, Colors.orange],
                 ),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(4),
               ),
               child: IconButton(
                 icon: const Icon(Icons.delete, color: Colors.white, size: 18),
