@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 import 'services/wp_api.dart';
-import 'screens/image_viewer_screen.dart';
 
 void main() {
   runApp(MyApp());
@@ -32,7 +31,6 @@ class MyApp extends StatelessWidget {
           primary: Colors.orange,
           secondary: Colors.deepOrange,
           surface: Color(0xFF1A1A3A),
-          background: Color(0xFF0A0A2A),
         ),
         textTheme: const TextTheme(
           bodyLarge: TextStyle(color: Colors.white),

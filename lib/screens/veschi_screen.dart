@@ -1,4 +1,7 @@
-import 'dart:convert';
+//import 'dart:convert';
+
+import 'package:file_selector/file_selector.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -258,6 +261,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
   }
 
+
   Future<void> _showImageSourceDialog(int itemId, String fieldType) async {
     await showDialog(
       context: context,
@@ -272,7 +276,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.orange),
+                leading: const Icon(Icons.photo_library, color: Colors.blue),
                 title: const Text('Галерея', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.of(context).pop();
@@ -280,11 +284,19 @@ class _VeschiScreenState extends State<VeschiScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.camera_alt, color: Colors.orange),
+                leading: const Icon(Icons.camera_alt, color: Colors.green),
                 title: const Text('Камера', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.of(context).pop();
                   _pickAndUploadImage(itemId, fieldType, ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.folder_open, color: Colors.orange),
+                title: const Text('Проводник телефона', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImageFromFileExplorer(itemId, fieldType);
                 },
               ),
             ],
@@ -293,6 +305,10 @@ class _VeschiScreenState extends State<VeschiScreen> {
       },
     );
   }
+
+
+
+
 
   Future<void> _pickAndUploadImage(int itemId, String fieldType, ImageSource source) async {
     try {
@@ -442,6 +458,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
     );
   }
 
+
   void _showFileSourceDialog(int itemId) {
     showDialog(
       context: context,
@@ -468,6 +485,14 @@ class _VeschiScreenState extends State<VeschiScreen> {
               onTap: () {
                 Navigator.pop(context);
                 _pickImageFromCamera(itemId);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder_open, color: Colors.orange),
+              title: const Text('Проводник телефона', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAnyFile(itemId); // ЭТО ДОЛЖЕН БЫТЬ НОВЫЙ МЕТОД С file_selector
               },
             ),
           ],
@@ -512,10 +537,12 @@ class _VeschiScreenState extends State<VeschiScreen> {
     }
   }
 
+  // Улучшаем обработку файлов
   Future<void> _uploadSelectedFile(int itemId, File file, String originalName) async {
     try {
       _showLoadingMessage('Загрузка файла...');
 
+      // Сохраняем оригинальное расширение файла
       final extension = originalName.split('.').last;
       final fileName = 'cust_file_${itemId}_${DateTime.now().millisecondsSinceEpoch}.$extension';
 
@@ -542,6 +569,9 @@ class _VeschiScreenState extends State<VeschiScreen> {
       _showMessage('Ошибка загрузки: $e', isError: true);
     }
   }
+
+
+
 
   Future<void> _downloadFile(int itemId) async {
     if (!_custFileUrls.containsKey(itemId)) {
@@ -1255,4 +1285,85 @@ class _VeschiScreenState extends State<VeschiScreen> {
     
     return cells;
   }
+
+  Future<void> _pickAnyFile(int itemId) async {
+    try {
+      print('=== НАЧАЛО ВЫБОРА ФАЙЛА ЧЕРЕЗ ПРОВОДНИК ===');
+      _showLoadingMessage('Открытие проводника...');
+      
+      final XFile? file = await openFile(
+        acceptedTypeGroups: [
+          XTypeGroup(
+            label: 'Все файлы',
+            extensions: ['*'],
+          ),
+        ],
+      );
+
+      print('=== РЕЗУЛЬТАТ ВЫБОРА: ${file?.path} ===');
+      
+      if (file != null && file.path.isNotEmpty) {
+        print('=== ФАЙЛ ВЫБРАН: ${file.name} ===');
+        final fileObj = File(file.path);
+        final fileName = file.name;
+        
+        await _uploadSelectedFile(itemId, fileObj, fileName);
+      } else {
+        print('=== ВЫБОР ОТМЕНЕН ===');
+        _showMessage('Выбор отменен');
+      }
+    } catch (e) {
+      print('=== ОШИБКА: $e ===');
+      _showMessage('Ошибка при выборе файла: $e', isError: true);
+    }
+  }
+
+
+  Future<void> _pickImageFromFileExplorer(int itemId, String fieldType) async {
+    try {
+      _showLoadingMessage('Открытие проводника для изображения...');
+      
+      final XFile? file = await openFile(
+        acceptedTypeGroups: [
+          XTypeGroup(
+            label: 'Изображения',
+            extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
+          ),
+        ],
+      );
+
+      if (file != null && file.path.isNotEmpty) {
+        final imageFile = File(file.path);
+        final fileName = '${fieldType}_${itemId}_${DateTime.now().millisecondsSinceEpoch}.${file.path.split('.').last}';
+        
+        final uploadedImage = await widget.api.uploadImage(imageFile, fileName);
+
+        if (uploadedImage != null) {
+          final imageId = uploadedImage['id'] as int;
+          
+          if (fieldType == 'vesch-foto') {
+            _veschFotoIds[itemId] = imageId;
+          } else {
+            _userPhotoIds[itemId] = imageId;
+          }
+          
+          await _saveChanges(itemId, shouldRefresh: true);
+          _showMessage('${fieldType == 'vesch-foto' ? 'Фото вещи' : 'Фото юзера'} обновлено из проводника!');
+        } else {
+          _showMessage('Ошибка загрузки изображения', isError: true);
+        }
+      } else {
+        _showMessage('Выбор отменен');
+      }
+    } catch (e) {
+      _showMessage('Ошибка при выборе изображения: $e', isError: true);
+      print('Ошибка выбора изображения через проводник: $e');
+    }
+  }
+
+
+
+
+
+
 }
