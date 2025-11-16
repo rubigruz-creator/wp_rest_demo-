@@ -15,7 +15,7 @@ class EditableImage extends StatelessWidget {
     required this.onTap,
     required this.onEdit,
     this.size = 56,
-    this.borderRadius = 20,
+    this.borderRadius = 8,
   });
 
   @override

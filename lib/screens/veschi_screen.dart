@@ -9,6 +9,8 @@ import 'image_viewer_screen.dart';
 import '../widgets/editable_image.dart';
 import '../widgets/file_upload_widget.dart';
 import '../widgets/file_management_dialog.dart';
+import '../widgets/column_filter_menu.dart';
+
 
 class VeschiScreen extends StatefulWidget {
   final WPApi api;
@@ -833,6 +835,8 @@ class _VeschiScreenState extends State<VeschiScreen> {
     return ScaffoldMessenger(
       key: _scaffoldMessengerKey,
       child: Scaffold(
+        
+
         appBar: AppBar(
           title: ShaderMask(
             shaderCallback: (bounds) => const LinearGradient(
@@ -849,6 +853,11 @@ class _VeschiScreenState extends State<VeschiScreen> {
             ),
           ),
           actions: [
+            // НОВОЕ: Меню фильтра колонок
+            ColumnFilterMenu(
+              columnVisibility: _columnVisibility,
+              onVisibilityChanged: _onColumnVisibilityChanged,
+            ),
             IconButton(
               icon: const Icon(Icons.refresh, color: Colors.orange),
               onPressed: _refreshData,
@@ -856,6 +865,13 @@ class _VeschiScreenState extends State<VeschiScreen> {
             ),
           ],
         ),
+          
+
+
+
+
+
+
         body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -944,6 +960,11 @@ class _VeschiScreenState extends State<VeschiScreen> {
                 scrollDirection: Axis.horizontal,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.vertical,
+
+
+
+
+
                   child: DataTable(
                     columnSpacing: 12,
                     horizontalMargin: 12,
@@ -955,16 +976,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
                       fontSize: 12,
                     ),
                     dataTextStyle: const TextStyle(color: Colors.white),
-                    columns: const [
-                      DataColumn(label: Text('ID')),
-                      DataColumn(label: Text('Фото\nВещи')),
-                      DataColumn(label: Text('Название\nВещи')),
-                      DataColumn(label: Text('Фото\nЮзера')),
-                      DataColumn(label: Text('Прозвище')),
-                      DataColumn(label: Text('Файл')),
-                      DataColumn(label: Text('Время - Деньги')),
-                      DataColumn(label: Text('Действия')),
-                    ],
+                    columns: _getVisibleColumns(), // ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД
                     rows: veschi.map((item) {
                       final id = item['id'] as int;
                       final dateIso = item['date'] ?? '';
@@ -976,145 +988,25 @@ class _VeschiScreenState extends State<VeschiScreen> {
                       final hasUserPhoto = userPhotoUrl.isNotEmpty;
 
                       return DataRow(
-                        cells: [
-                          DataCell(
-                            Text(id.toString(), style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-                          ),
-                          DataCell(
-                            EditableImage(
-                              imageUrl: veschFotoUrl,
-                              hasImage: hasVeschFoto,
-                              onTap: () => _onImageTap(id, 'vesch-foto', veschFotoUrl, hasVeschFoto),
-                              onEdit: () => _onImageEdit(id, 'vesch-foto'),
-                              size: 56,
-                              borderRadius: 20,
-                            ),
-                          ),
-                          DataCell(
-                            SizedBox(
-                              width: 130,
-                              child: TextField(
-                                controller: _veschNameControllers[id],
-                                style: const TextStyle(color: Colors.white, fontSize: 12),
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                  isDense: true,
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.orange),
-                                  ),
-                                ),
-                                maxLines: 2,
-                              ),
-                            ),
-                          ),
-                          DataCell(
-                            EditableImage(
-                              imageUrl: userPhotoUrl,
-                              hasImage: hasUserPhoto,
-                              onTap: () => _onImageTap(id, 'photo', userPhotoUrl, hasUserPhoto),
-                              onEdit: () => _onImageEdit(id, 'photo'),
-                              size: 56,
-                              borderRadius: 20,
-                            ),
-                          ),
-                          DataCell(
-                            SizedBox(
-                              width: 90,
-                              child: TextField(
-                                controller: _nicknameControllers[id],
-                                style: const TextStyle(color: Colors.white, fontSize: 12),
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                  isDense: true,
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.orange),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          DataCell(
-                            FileUploadWidget(
-                              fileUrl: _custFileUrls[id],
-                              fileName: _custFileNames[id],
-                              hasFile: _custFileIds.containsKey(id) && _custFileIds[id] != null,
-                              onTap: () => _showFileManagementDialog(id),
-                              onUpload: () => _showFileSourceDialog(id),
-                              onDownload: () => _downloadFile(id),
-                              onDelete: () => _deleteFile(id),
-                              size: 40,
-                            ),
-                          ),
-                          DataCell(
-                            Container(
-                              width: 100,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    _formatSmartDate(dateIso),
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.orange,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _formatTimer(dateIso),
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontFamily: 'monospace',
-                                      color: Colors.yellow,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          DataCell(
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Colors.green, Colors.lightGreen],
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: IconButton(
-                                    icon: const Icon(Icons.save, color: Colors.white, size: 18),
-                                    onPressed: () => _saveChanges(id),
-                                    tooltip: 'Сохранить',
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Colors.red, Colors.orange],
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.white, size: 18),
-                                    onPressed: () => _deleteItem(id),
-                                    tooltip: 'Удалить',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+
+                        cells: _getVisibleCells( // ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД
+                          id: id,
+                          veschFotoUrl: veschFotoUrl,
+                          hasVeschFoto: hasVeschFoto,
+                          userPhotoUrl: userPhotoUrl,
+                          hasUserPhoto: hasUserPhoto,
+                          dateIso: dateIso,
+                        ),
+                      
+                      
                       );
                     }).toList(),
                   ),
+                
+                
+                
+                
+                
                 ),
               );
             },
@@ -1146,5 +1038,221 @@ class _VeschiScreenState extends State<VeschiScreen> {
         ),
       ),
     );
+  }
+
+// НОВОЕ: Состояние видимости колонок
+  Map<String, bool> _columnVisibility = {
+    'id': true,
+    'veschFoto': true,
+    'veschName': true,
+    'userPhoto': true,
+    'nickname': true,
+    'file': true,
+    'timer': true,
+    'actions': true,
+  };
+
+  // НОВЫЙ МЕТОД: Обработчик изменения видимости
+  void _onColumnVisibilityChanged(Map<String, bool> newVisibility) {
+    setState(() {
+      _columnVisibility = newVisibility;
+    });
+  }
+
+  // НОВЫЙ МЕТОД: Получить видимые колонки
+  List<DataColumn> _getVisibleColumns() {
+    final columns = <DataColumn>[];
+    
+    if (_columnVisibility['id'] == true) {
+      columns.add(const DataColumn(label: Text('ID')));
+    }
+    if (_columnVisibility['veschFoto'] == true) {
+      columns.add(const DataColumn(label: Text('Фото\nВещи')));
+    }
+    if (_columnVisibility['veschName'] == true) {
+      columns.add(const DataColumn(label: Text('Название\nВещи')));
+    }
+    if (_columnVisibility['userPhoto'] == true) {
+      columns.add(const DataColumn(label: Text('Фото\nЮзера')));
+    }
+    if (_columnVisibility['nickname'] == true) {
+      columns.add(const DataColumn(label: Text('Прозвище')));
+    }
+    if (_columnVisibility['file'] == true) {
+      columns.add(const DataColumn(label: Text('Файл')));
+    }
+    if (_columnVisibility['timer'] == true) {
+      columns.add(const DataColumn(label: Text('Время - Деньги')));
+    }
+    if (_columnVisibility['actions'] == true) {
+      columns.add(const DataColumn(label: Text('Действия')));
+    }
+    
+    return columns;
+  }
+
+  // НОВЫЙ МЕТОД: Получить видимые ячейки
+  List<DataCell> _getVisibleCells({
+    required int id,
+    required String veschFotoUrl,
+    required bool hasVeschFoto,
+    required String userPhotoUrl,
+    required bool hasUserPhoto,
+    required String dateIso,
+  }) {
+    final cells = <DataCell>[];
+    
+    if (_columnVisibility['id'] == true) {
+      cells.add(DataCell(
+        Text(id.toString(), style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+      ));
+    }
+    if (_columnVisibility['veschFoto'] == true) {
+      cells.add(DataCell(
+        EditableImage(
+          imageUrl: veschFotoUrl,
+          hasImage: hasVeschFoto,
+          onTap: () => _onImageTap(id, 'vesch-foto', veschFotoUrl, hasVeschFoto),
+          onEdit: () => _onImageEdit(id, 'vesch-foto'),
+          size: 56,
+          borderRadius: 12, // Ваше значение скругления
+        ),
+      ));
+    }
+    if (_columnVisibility['veschName'] == true) {
+      cells.add(DataCell(
+        SizedBox(
+          width: 130,
+          child: TextField(
+            controller: _veschNameControllers[id],
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              isDense: true,
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.orange),
+              ),
+            ),
+            maxLines: 2,
+          ),
+        ),
+      ));
+    }
+    if (_columnVisibility['userPhoto'] == true) {
+      cells.add(DataCell(
+        EditableImage(
+          imageUrl: userPhotoUrl,
+          hasImage: hasUserPhoto,
+          onTap: () => _onImageTap(id, 'photo', userPhotoUrl, hasUserPhoto),
+          onEdit: () => _onImageEdit(id, 'photo'),
+          size: 56,
+          borderRadius: 12, // Ваше значение скругления
+        ),
+      ));
+    }
+    if (_columnVisibility['nickname'] == true) {
+      cells.add(DataCell(
+        SizedBox(
+          width: 90,
+          child: TextField(
+            controller: _nicknameControllers[id],
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              isDense: true,
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.orange),
+              ),
+            ),
+          ),
+        ),
+      ));
+    }
+    if (_columnVisibility['file'] == true) {
+      cells.add(DataCell(
+        FileUploadWidget(
+          fileUrl: _custFileUrls[id],
+          fileName: _custFileNames[id],
+          hasFile: _custFileIds.containsKey(id) && _custFileIds[id] != null,
+          onTap: () => _showFileManagementDialog(id),
+          onUpload: () => _showFileSourceDialog(id),
+          onDownload: () => _downloadFile(id),
+          onDelete: () => _deleteFile(id),
+          size: 40,
+        ),
+      ));
+    }
+    if (_columnVisibility['timer'] == true) {
+      cells.add(DataCell(
+        Container(
+          width: 100,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                _formatSmartDate(dateIso),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _formatTimer(dateIso),
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                  color: Colors.yellow,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ));
+    }
+    if (_columnVisibility['actions'] == true) {
+      cells.add(DataCell(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.green, Colors.lightGreen],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.save, color: Colors.white, size: 18),
+                onPressed: () => _saveChanges(id),
+                tooltip: 'Сохранить',
+              ),
+            ),
+            const SizedBox(width: 4),
+            Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.red, Colors.orange],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.delete, color: Colors.white, size: 18),
+                onPressed: () => _deleteItem(id),
+                tooltip: 'Удалить',
+              ),
+            ),
+          ],
+        ),
+      ));
+    }
+    
+    return cells;
   }
 }
