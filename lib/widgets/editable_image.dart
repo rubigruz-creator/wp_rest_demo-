@@ -74,7 +74,7 @@ class EditableImage extends StatelessWidget {
                   height: 20,
                   decoration: BoxDecoration(
                     color: Colors.orange,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(4),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.3),

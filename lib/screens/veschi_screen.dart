@@ -1115,7 +1115,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
           onTap: () => _onImageTap(id, 'vesch-foto', veschFotoUrl, hasVeschFoto),
           onEdit: () => _onImageEdit(id, 'vesch-foto'),
           size: 56,
-          borderRadius: 12, // Ваше значение скругления
+          borderRadius: 4, // Ваше значение скругления
         ),
       ));
     }
@@ -1147,7 +1147,7 @@ class _VeschiScreenState extends State<VeschiScreen> {
           onTap: () => _onImageTap(id, 'photo', userPhotoUrl, hasUserPhoto),
           onEdit: () => _onImageEdit(id, 'photo'),
           size: 56,
-          borderRadius: 12, // Ваше значение скругления
+          borderRadius: 4, // Ваше значение скругления
         ),
       ));
     }
